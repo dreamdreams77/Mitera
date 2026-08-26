@@ -550,6 +550,44 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 #blog::-webkit-scrollbar-track{background:rgba(0,0,0,0.3);border-radius:3px}
 #blog::-webkit-scrollbar-thumb{background:var(--rim2);border-radius:3px}
 #blog::-webkit-scrollbar-thumb:hover{background:var(--willow2)}
+
+/* ════════════════════════════════════
+   UNO HAND — CARD-BASED ACTION SELECT
+════════════════════════════════════ */
+.uno-hand{display:flex;gap:9px;flex-wrap:wrap;padding:12px 14px;align-items:center;
+  background:rgba(0,0,0,0.4);border-top:2px solid var(--rim)}
+.uno-card{
+  --card-col:#888;width:66px;height:94px;border-radius:11px;flex-shrink:0;cursor:pointer;
+  position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(160deg,var(--card-col),color-mix(in srgb,var(--card-col) 60%,#000));
+  border:3px solid rgba(255,255,255,0.85);box-shadow:0 4px 10px rgba(0,0,0,0.55),inset 0 0 12px rgba(255,255,255,0.12);
+  transition:transform .15s ease,box-shadow .15s ease;
+}
+.uno-card:hover{transform:translateY(-9px) rotate(-1deg);box-shadow:0 10px 18px rgba(0,0,0,0.6),0 0 14px var(--card-col)}
+.uno-card.disabled{opacity:0.32;cursor:not-allowed;filter:grayscale(0.7);transform:none;box-shadow:none}
+.uno-card::before{content:'';position:absolute;inset:6px;border-radius:50%/38%;
+  background:rgba(255,255,255,0.14);transform:rotate(-18deg)}
+.uc-corner{position:absolute;top:4px;left:6px;font-size:0.6rem;color:#fff;text-shadow:0 0 3px #000}
+.uc-icon{font-size:1.6rem;filter:drop-shadow(0 1px 2px rgba(0,0,0,0.6));z-index:1}
+.uc-name{font-family:'Orbitron',sans-serif;font-size:0.4rem;letter-spacing:0.05em;color:#fff;
+  text-transform:uppercase;margin-top:3px;text-align:center;padding:0 3px;z-index:1;text-shadow:0 0 3px #000}
+.uc-mp{position:absolute;bottom:4px;right:5px;font-size:0.44rem;color:#fff;
+  background:rgba(0,0,0,0.45);padding:1px 4px;border-radius:6px;z-index:1}
+
+/* ── DICE PANEL — YAHTZEE POWER ROLL ── */
+.dice-panel{display:flex;flex-direction:column;gap:9px;padding:12px 14px;
+  background:rgba(0,0,0,0.4);border-top:2px solid var(--rim)}
+.dice-info{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;
+  font-family:'Orbitron',sans-serif;font-size:0.58rem;letter-spacing:0.08em;color:var(--txt)}
+.dice-score{color:var(--thunder);text-shadow:0 0 6px var(--thunder)}
+.dice-row{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+.die{width:44px;height:44px;background:#eef2f5;border:2px solid #1a1a1a;border-radius:8px;
+  display:grid;place-items:center;font-size:1.3rem;font-weight:900;color:#111;cursor:pointer;
+  transition:transform .15s,box-shadow .15s;user-select:none}
+.die.held{border-color:var(--thunder);box-shadow:0 0 10px var(--thunder);background:#fff3c4}
+.die:not(.held):hover{transform:translateY(-3px)}
+.dice-btns{display:flex;gap:8px;flex-wrap:wrap}
+.dice-btns .act{flex:1;min-width:110px;padding:10px 8px;font-size:0.6rem}
 </style>
 </head>
 <body>
@@ -749,6 +787,7 @@ let S={
   pAtb:0,eAtb:0,pTurn:false,eAtb:0,over:false,
   eq:[],combo:null,items:{potion:3,ether:2},stats:{dealt:0,crits:0,spells:0},
   atbT:null,lineIdx:0,pStatus:{},eStatus:{},
+  hand:[],pendingCard:null,dice:[1,1,1,1,1],held:[false,false,false,false,false],rollsLeft:3,rolled:false,
 };
 
 const WAVES=[
@@ -879,7 +918,7 @@ function startBattle(){
   const wave=WAVES[Math.min(S.wave-1,WAVES.length-1)];
   const eName=wave[Math.floor(Math.random()*wave.length)];
   const e=ENEMIES[eName];
-  const w={...e};
+  const w={...e,maxHp:e.hp};
   S.enemy=w;S.over=false;S.pTurn=false;S.pAtb=0;S.eAtb=0;
   S.player.hp=100;S.player.mp=50;S.player.limit=0;
   S.pStatus={};S.eStatus={};
@@ -992,95 +1031,193 @@ function tick(){
   updateBars();
 }
 function onReady(){
-  const l=document.getElementById('atb-lbl');l.textContent='★ READY — CHOOSE ACTION';l.className='rdy';
-  renderActions(true);
+  const l=document.getElementById('atb-lbl');l.textContent='★ READY — PLAY A CARD';l.className='rdy';
+  renderHand();
   if(Math.random()<0.18){const ln=PERSONAL[S.lineIdx%PERSONAL.length];S.lineIdx++;setTimeout(()=>log(ln,'lo'),300);}
 }
 
 // ── ACTIONS ──
 function endTurn(){
-  S.pTurn=false;S.pAtb=0;
+  S.pTurn=false;S.pAtb=0;S.pendingCard=null;
   const l=document.getElementById('atb-lbl');l.textContent='ATB CHARGING...';l.className='wait';
-  renderActions(false);
-}
-function renderActions(on){
-  try{
-    const r=document.getElementById('arow');
-    if(!r){console.error('arow element not found!');return;}
-    r.innerHTML='';
-    console.log('renderActions called with on='+on);
-    let ki=1;
-    const btn=(lbl,cls,cb,dis,sub,subWarn)=>{
-      const b=document.createElement('button');b.className=`act ${cls}`;b.disabled=!on||dis;b.onclick=cb;
-      b.innerHTML=lbl+`<span class="act-key">[${ki}]</span>`+(sub?`<span class="act-sub${subWarn?' warn':''}">${sub}</span>`:'');
-      b.dataset.key=ki;r.appendChild(b);ki++;
-    };
-    btn('⚔ ATTACK','act-atk',doAttack,false,null);
-    if(S.eq.length){
-      if(S.combo){const c=S.combo,low=S.player.mp<c.mp;
-        btn(`${c.icon} ${c.name}`,'act-mag',()=>doCombo(c),low,low?'⚠ Low MP':`${c.mp} MP`,low);}
-      else{S.eq.filter(id=>id!=='all').slice(0,2).forEach(id=>{
-        const m=MAT[id],low=S.player.mp<m.mp;
-        btn(`${m.icon} ${m.name}`,'act-mag',()=>doCast(id),low,low?'⚠ Low MP':`${m.mp} MP`,low);});}
-    }
-    if(S.player.limit>=100)btn('💥 LIMIT','act-lim',doLimit,false,'UNLEASH');
-    if(S.items.potion>0)btn(`🧪 POTION×${S.items.potion}`,'act-itm',doPotion,false,'+150 HP');
-    if(S.items.ether>0)btn(`🧿 ETHER×${S.items.ether}`,'act-itm',doEther,false,'+40 MP');
-    console.log('Created '+r.children.length+' buttons');
-  }catch(e){console.error('renderActions error: '+e.message);}
+  document.getElementById('arow').innerHTML='';
 }
 
-// ── PLAYER MOVES ──
-function doAttack(){
-  if(!S.pTurn||S.over)return;endTurn();
-  atkSlide('cw-p','cw-e');
-  const crit=Math.random()<0.15;
-  let d=calcD(S.player.atk,S.enemy.def,1.0);if(crit){d=Math.floor(d*1.75);S.stats.crits++;playCrit();}
-  else playHit();
-  setTimeout(()=>{hitFl('cw-e');applyED(d);
-    log(crit?`⚡ CRITICAL! Noom Wolliw strikes for ${d}!`:`Noom Wolliw attacks for ${d}.`,crit?'lk':'lp');
-    chLim(12);S.stats.dealt+=d;chkEnd();},230);
-}
-function doCast(id){
-  if(!S.pTurn||S.over)return;const m=MAT[id];if(S.player.mp<m.mp)return;
-  endTurn();S.player.mp-=m.mp;S.stats.spells++;playMagic(m.el);
-  if(m.type==='heal'){const a=m.pow+30;S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
-    popD(a,'dh','cw-p');log(`${m.icon} Cure restores ${a} HP!`,'lh');updateBars();checkEnd2();}
-  else if(m.type==='buff'){S.player.wallT=4;S.player.wall=true;
-    addStatus('p-status','wall','🛡️ Wall');log(`${m.icon} Wall rises!`,'lh');}
-  else{
-    let d=calcD(S.player.atk,S.enemy.def,m.pow/30,m.el);
-    if(m.el==='all')d=Math.floor(d*0.7);
-    playMagic(m.el);popD(d,'dp','cw-e');S.enemy.hp-=d;
-    log(`${m.icon} ${m.name} hits for ${d}!`,'lm');
-    if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}chLim(8);S.stats.dealt+=d;
+// ── UNO HAND — CARD-BASED ACTION SELECT ──
+function buildHand(){
+  const hand=[
+    {kind:'atk',name:'Strike',icon:'⚔',col:'#9aa5b1',mp:0,el:null,pow:30},
+    {kind:'atk',name:'Wild',icon:'🌈',col:'#c05aff',mp:10,el:'all',pow:26},
+    {kind:'drawtwo',name:'Draw Two',icon:'✌️',col:'#ff5e5e',mp:6},
+  ];
+  if(S.combo){
+    hand.push({kind:'combo',name:S.combo.name,icon:S.combo.icon,col:'#f7d84b',mp:S.combo.mp});
+  }else{
+    S.eq.forEach(id=>{
+      const m=MAT[id];
+      hand.push({kind:m.type==='heal'?'heal':m.type==='buff'?'buff':'dmg',
+        name:m.name,icon:m.icon,col:m.col,mp:m.mp,pow:m.pow,el:m.el});
+    });
   }
-  updateBars();chkEnd();
+  if(S.player.limit>=100)hand.push({kind:'limit',name:'Limit Break',icon:'💥',col:'#ff6d00',mp:0});
+  return hand;
 }
-function doCombo(c){
-  if(!S.pTurn||S.over)return;const mp=c.mp;if(S.player.mp<mp)return;
-  endTurn();S.player.mp-=mp;playMagic('fire');playLimitSound();
-  let totalDmg=0;
-  const strike=()=>{
-    const d=calcD(S.player.atk*1.2,S.enemy.def,c.mat.length/4);totalDmg+=d;
-    popD(d,'dk','cw-e');S.enemy.hp-=d;playHit();
-  };
-  setTimeout(()=>{screenShake();strike();},100);
-  setTimeout(()=>{atkSlide('cw-p','cw-e');strike();},250);
-  setTimeout(()=>{strike();},400);
-  setTimeout(()=>{if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
-    log(`✨ ${c.icon} ${c.name} deals ${totalDmg}!`,'lk');chLim(30);S.stats.dealt+=totalDmg;updateBars();chkEnd();},500);
+function renderHand(){
+  S.pendingCard=null;
+  const r=document.getElementById('arow');r.innerHTML='';
+  const handWrap=document.createElement('div');handWrap.className='uno-hand';
+  S.hand=buildHand();
+  S.hand.forEach(card=>{
+    const low=card.mp>0&&S.player.mp<card.mp;
+    const c=document.createElement('div');c.className='uno-card'+(low?' disabled':'');
+    c.style.setProperty('--card-col',card.col);
+    c.innerHTML=`<div class="uc-corner">${card.icon}</div><div class="uc-icon">${card.icon}</div>`+
+      `<div class="uc-name">${card.name}</div>${card.mp?`<div class="uc-mp">${card.mp}MP</div>`:''}`;
+    if(!low)c.onclick=()=>selectCard(card);
+    handWrap.appendChild(c);
+  });
+  r.appendChild(handWrap);
+  const itemWrap=document.createElement('div');itemWrap.className='uno-hand';itemWrap.style.paddingTop='0';
+  if(S.items.potion>0){const b=document.createElement('button');b.className='act act-itm';b.style.minWidth='110px';
+    b.innerHTML=`🧪 POTION×${S.items.potion}<span class="act-sub">+150 HP</span>`;b.onclick=doPotion;itemWrap.appendChild(b);}
+  if(S.items.ether>0){const b=document.createElement('button');b.className='act act-itm';b.style.minWidth='110px';
+    b.innerHTML=`🧿 ETHER×${S.items.ether}<span class="act-sub">+40 MP</span>`;b.onclick=doEther;itemWrap.appendChild(b);}
+  if(itemWrap.children.length)r.appendChild(itemWrap);
 }
-function doLimit(){
-  if(!S.pTurn||S.over||S.player.limit<100)return;
-  endTurn();S.player.limit=0;
-  screenShake();chromaFlash();playLimitSound();shockwave();
-  setTimeout(()=>{
-    let d=calcD(S.player.atk*2.5,S.enemy.def,1.5);
-    popD(d,'dk','cw-e');S.enemy.hp-=d;
-    log(`💥 BUSTER LIMIT! ${d} damage!`,'lk');
-    if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}S.stats.dealt+=d;updateBars();chkEnd();
-  },300);
+function selectCard(card){
+  if(!S.pTurn||S.over)return;
+  if(card.mp>0&&S.player.mp<card.mp)return;
+  if(card.kind==='buff'||card.kind==='limit'){resolveCard(card,1,'');return;}
+  S.pendingCard=card;S.dice=[1,1,1,1,1];S.held=[false,false,false,false,false];S.rollsLeft=3;S.rolled=false;
+  drawDiceUI(card);
+}
+
+// ── YAHTZEE DICE — POWER ROLL ──
+function scoreDice(dice){
+  const counts={};dice.forEach(v=>counts[v]=(counts[v]||0)+1);
+  const vals=Object.values(counts).sort((a,b)=>b-a);
+  const uniq=Object.keys(counts).map(Number);
+  const has=seq=>seq.every(v=>uniq.includes(v));
+  if(vals[0]===5)return{mult:2.5,label:'YAHTZEE!!'};
+  if(vals[0]===4)return{mult:1.8,label:'FOUR OF A KIND'};
+  if(vals[0]===3&&vals[1]===2)return{mult:1.5,label:'FULL HOUSE'};
+  if(has([1,2,3,4,5])||has([2,3,4,5,6]))return{mult:1.4,label:'LARGE STRAIGHT'};
+  if(has([1,2,3,4])||has([2,3,4,5])||has([3,4,5,6]))return{mult:1.25,label:'SMALL STRAIGHT'};
+  if(vals[0]===3)return{mult:1.15,label:'THREE OF A KIND'};
+  if(vals[0]===2&&vals[1]===2)return{mult:1.05,label:'TWO PAIR'};
+  return{mult:0.85,label:'BUST'};
+}
+function drawDiceUI(card){
+  const r=document.getElementById('arow');r.innerHTML='';
+  const wrap=document.createElement('div');wrap.className='dice-panel';
+  const info=document.createElement('div');info.className='dice-info';
+  const sc=S.rolled?scoreDice(S.dice):{mult:1,label:'ROLL TO BEGIN'};
+  info.innerHTML=`<span>${card.icon} ${card.name} — roll for power</span><span class="dice-score">${sc.label} ×${sc.mult.toFixed(2)}</span>`;
+  wrap.appendChild(info);
+  const row=document.createElement('div');row.className='dice-row';
+  S.dice.forEach((v,i)=>{
+    const d=document.createElement('div');d.className='die'+(S.held[i]?' held':'');
+    d.textContent=S.rolled?v:'?';
+    if(S.rolled&&S.rollsLeft>0)d.onclick=()=>{S.held[i]=!S.held[i];drawDiceUI(card);};
+    row.appendChild(d);
+  });
+  wrap.appendChild(row);
+  const btns=document.createElement('div');btns.className='dice-btns';
+  const rollBtn=document.createElement('button');rollBtn.className='act act-mag';
+  rollBtn.textContent=S.rollsLeft>0?`🎲 ROLL (${S.rollsLeft} left)`:'NO ROLLS LEFT';
+  rollBtn.disabled=S.rollsLeft<=0;rollBtn.onclick=()=>doRoll(card);
+  const confirmBtn=document.createElement('button');confirmBtn.className='act act-atk';
+  confirmBtn.textContent='✓ LOCK IN';confirmBtn.disabled=!S.rolled;
+  confirmBtn.onclick=()=>{const s=scoreDice(S.dice);resolveCard(card,s.mult,s.label);};
+  const backBtn=document.createElement('button');backBtn.className='act act-itm';
+  backBtn.textContent='↩ CHOOSE ANOTHER';backBtn.onclick=renderHand;
+  btns.appendChild(rollBtn);btns.appendChild(confirmBtn);btns.appendChild(backBtn);
+  wrap.appendChild(btns);
+  r.appendChild(wrap);
+}
+function doRoll(card){
+  if(S.rollsLeft<=0)return;
+  S.rollsLeft--;S.rolled=true;
+  S.dice=S.dice.map((v,i)=>S.held[i]?v:1+Math.floor(Math.random()*6));
+  playHit();
+  drawDiceUI(card);
+}
+
+// ── CARD RESOLUTION ──
+function resolveCard(card,mult,label){
+  if(!S.pTurn||S.over)return;
+  endTurn();
+  if(card.mp>0)S.player.mp-=card.mp;
+  const tag=label?` — ${label}`:'';
+  switch(card.kind){
+    case 'atk':{
+      atkSlide('cw-p','cw-e');
+      const d=calcD(S.player.atk,S.enemy.def,mult,card.el);
+      if(mult>=1.8){S.stats.crits++;playCrit();}else playHit();
+      setTimeout(()=>{hitFl('cw-e');applyED(d);
+        log(`${card.icon} ${card.name}${tag} hits for ${d}!`,mult>=1.8?'lk':'lp');
+        chLim(mult>=1.8?18:12);S.stats.dealt+=d;chkEnd();},230);
+      break;
+    }
+    case 'dmg':{
+      S.stats.spells++;playMagic(card.el);
+      let d=calcD(S.player.atk,S.enemy.def,(card.pow/30)*mult,card.el);
+      if(card.el==='all')d=Math.floor(d*0.7);
+      popD(d,'dp','cw-e');S.enemy.hp-=d;
+      log(`${card.icon} ${card.name}${tag} hits for ${d}!`,'lm');
+      if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
+      chLim(8);S.stats.dealt+=d;updateBars();chkEnd();
+      break;
+    }
+    case 'heal':{
+      playMagic('restore');
+      const a=Math.floor((card.pow+30)*mult);
+      S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
+      popD(a,'dh','cw-p');log(`${card.icon} ${card.name}${tag} restores ${a} HP!`,'lh');
+      updateBars();checkEnd2();
+      break;
+    }
+    case 'drawtwo':{
+      let total=0;
+      const strike=()=>{const d=calcD(S.player.atk,S.enemy.def,0.7*mult);total+=d;popD(d,'dk','cw-e');S.enemy.hp-=d;playHit();};
+      atkSlide('cw-p','cw-e');
+      setTimeout(strike,120);
+      setTimeout(()=>{strike();
+        if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
+        log(`✌️ Draw Two${tag} deals ${total}!`,'lk');
+        chLim(20);S.stats.dealt+=total;updateBars();chkEnd();},320);
+      break;
+    }
+    case 'combo':{
+      playMagic('fire');playLimitSound();
+      let total=0;
+      const strike=()=>{const d=calcD(S.player.atk*1.2,S.enemy.def,(S.combo.mat.length/4)*mult);total+=d;popD(d,'dk','cw-e');S.enemy.hp-=d;playHit();};
+      setTimeout(()=>{screenShake();strike();},100);
+      setTimeout(()=>{atkSlide('cw-p','cw-e');strike();},250);
+      setTimeout(()=>{strike();},400);
+      setTimeout(()=>{if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
+        log(`✨ ${S.combo.icon} ${S.combo.name}${tag} deals ${total}!`,'lk');
+        chLim(30);S.stats.dealt+=total;updateBars();chkEnd();},500);
+      break;
+    }
+    case 'buff':{
+      S.player.wallT=4;S.player.wall=true;
+      addStatus('p-status','wall','🛡️ Wall');log(`${card.icon} Wall rises!`,'lh');
+      updateBars();
+      break;
+    }
+    case 'limit':{
+      S.player.limit=0;
+      screenShake();chromaFlash();playLimitSound();shockwave();
+      setTimeout(()=>{
+        let d=calcD(S.player.atk*2.5,S.enemy.def,1.5);
+        popD(d,'dk','cw-e');S.enemy.hp-=d;
+        log(`💥 BUSTER LIMIT! ${d} damage!`,'lk');
+        if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}S.stats.dealt+=d;updateBars();chkEnd();
+      },300);
+      break;
+    }
+  }
 }
 function doPotion(){
   if(!S.pTurn||S.over||S.items.potion<1)return;endTurn();
@@ -1179,7 +1316,10 @@ document.getElementById('t-press').onclick=showPrep;
 document.getElementById('ded').onclick=showPrep;
 document.addEventListener('keydown',e=>{
   if(e.code==='Space')showPrep();
-  if(S.pTurn&&e.key>='1'&&e.key<='5'){
+  if(!S.pTurn)return;
+  const cards=document.querySelectorAll('.uno-card:not(.disabled)');
+  if(cards.length&&e.key>='1'&&e.key<='9'){cards[parseInt(e.key)-1]?.click();return;}
+  if(e.key>='1'&&e.key<='5'){
     const btns=document.querySelectorAll('.act:not(:disabled)');
     btns[parseInt(e.key)-1]?.click();
   }
