@@ -137,9 +137,6 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .mi{font-size:1.1rem;display:block}
 .mn{font-size:0.48rem;color:var(--txt2);margin-top:1px;display:block}
 .mc{font-size:0.44rem;color:var(--mp);display:block}
-.combo-hint{margin-top:8px;padding:6px 8px;background:rgba(0,0,0,0.3);border-left:2px solid var(--rim2);
-  font-size:0.55rem;color:var(--txt2);line-height:1.7;transition:border-color .3s,color .3s}
-.combo-hint.active{border-color:var(--thunder);color:var(--thunder)}
 .ei-wrap{display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,0.28);
   border:1px solid var(--rim);padding:10px;margin-bottom:8px;position:relative;overflow:hidden}
 .ei-wrap::after{content:'';position:absolute;inset:0;
@@ -156,8 +153,6 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
   color:var(--fire2);text-transform:uppercase}
 .ei-tip{font-size:0.55rem;color:var(--txt2);line-height:1.7;padding:5px 7px;
   background:rgba(0,0,0,0.2);border-left:2px solid var(--rim2);margin-bottom:9px}
-.stat-g{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:0.58rem;color:var(--txt2);line-height:1.9}
-.stat-g .sv{color:var(--willow)}
 .btn-start{display:block;width:100%;padding:12px;font-family:'Orbitron',sans-serif;
   font-size:0.65rem;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;
   background:linear-gradient(90deg,#081a12,#0c3020);color:var(--willow);
@@ -273,7 +268,13 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 
 /* ── PLAYER SPRITE (Noom Wolliw) — PIXEL ART ── */
 .spr-p{position:relative;width:64px;height:80px;image-rendering:pixelated}
-.spr-p .p-glow{display:none}
+.spr-p .p-glow{
+  position:absolute;bottom:4px;left:50%;transform:translateX(-50%);
+  width:44px;height:60px;border-radius:50%;
+  background:radial-gradient(circle,rgba(168,230,207,0.28) 0%,transparent 72%);
+  filter:blur(3px);animation:auraPulse 3s ease-in-out infinite;
+}
+@keyframes auraPulse{0%,100%{opacity:0.6;transform:translateX(-50%) scale(0.92)}50%{opacity:1;transform:translateX(-50%) scale(1.08)}}
 .spr-p .p-wL,.spr-p .p-wR{position:absolute;top:12px;width:16px;height:24px;
   background:#5ec9a0;border:1px solid #3aab82;
   animation:wFlap 1.2s step(2,end) infinite}
@@ -382,7 +383,12 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .se-boss .eb2-arm{position:absolute;bottom:16px;width:6px;height:18px;
   background:#2a0a00;border:1px solid #ff8c5a}
 .se-boss .eb2-armL{right:34px}.se-boss .eb2-armR{left:34px}
-.se-boss .eb2-aura{display:none}
+.se-boss .eb2-aura{
+  position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+  width:92px;height:92px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,79,31,0.35) 0%,transparent 70%);
+  filter:blur(4px);animation:auraPulse 2.2s ease-in-out infinite;
+}
 
 /* Ashveil — pale one-winged angel */
 .se-seph{width:70px;height:90px}
@@ -401,7 +407,12 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 @keyframes wingDrift{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
 .se-seph .es-blade{position:absolute;bottom:4px;right:2px;width:2px;height:48px;
   background:#a0c0ff;border:1px solid #6080dd;transform:rotate(-10deg);transform-origin:bottom center}
-.se-seph .es-aura{display:none}
+.se-seph .es-aura{
+  position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);
+  width:100px;height:124px;border-radius:50%;
+  background:radial-gradient(circle,rgba(160,140,255,0.32) 0%,transparent 70%);
+  filter:blur(5px);animation:auraPulse 2.6s ease-in-out infinite;
+}
 
 /* ── CHARACTER ANIMATIONS ── */
 .cw.attack-r{animation:atkR .4s cubic-bezier(.4,0,.2,1)}
@@ -512,7 +523,8 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 #arow{
   display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start;
   padding:12px 14px;background:rgba(0,0,0,0.4);
-  border-top:2px solid var(--rim);flex-shrink:0
+  border-top:2px solid var(--rim);flex-shrink:1;min-height:60px;
+  max-height:42vh;overflow-y:auto
 }
 .act{
   flex:1;min-width:140px;padding:14px 12px;font-family:'Orbitron',sans-serif;
@@ -639,6 +651,34 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .pip.on{background:#1a1a1a}
 .dice-btns{display:flex;gap:8px;flex-wrap:wrap}
 .dice-btns .act{flex:1;min-width:110px;padding:10px 8px;font-size:0.6rem}
+
+/* ── RESPONSIVE — keep the combat log breathing room on short/narrow screens ── */
+@media(max-height:760px){
+  #arena{height:200px}
+  .ei-emj{font-size:2.2rem}
+  .bc{padding:8px 12px}
+  .brow{margin-bottom:3px}
+  .btrack{height:9px}
+  .lo-row{margin-top:4px}
+  #arow{padding:8px 10px}
+  #atb-lbl{padding:6px 14px;font-size:0.65rem}
+}
+@media(max-height:620px){
+  #arena{height:150px}
+  .bc{padding:6px 10px}
+  .bc-name{margin-bottom:4px}
+  #log-wrap{padding:6px 10px}
+}
+@media(max-width:480px){
+  .uno-card{width:54px;height:78px}
+  .uc-icon{font-size:1.3rem}
+  .die{width:38px;height:38px}
+  .pip-grid{width:26px;height:26px}
+  .act{min-width:110px;padding:10px 8px;font-size:0.6rem}
+  #cw-p{left:4%}
+  #cw-e{right:4%}
+  .c-lbl{font-size:0.72rem}
+}
 </style>
 </head>
 <body>
@@ -866,6 +906,7 @@ let S={
   eq:[],combo:null,items:{potion:3,ether:2},stats:{dealt:0,crits:0,spells:0},
   atbT:null,lineIdx:0,pStatus:{},eStatus:{},
   hand:[],pendingCard:null,dice:[1,1,1,1,1],held:[false,false,false,false,false],rollsLeft:3,rolled:false,
+  streak:0,
 };
 
 const WAVES=[
@@ -935,7 +976,13 @@ function log(txt,cls='lo'){
 }
 
 // ── DAMAGE ──
-function calcD(atk,def,mul,el){return Math.floor(atk*mul - def*0.5 + Math.random()*8)}
+function elMod(el){
+  if(!el||!S.enemy)return 1;
+  if(S.enemy.weak.includes(el))return 1.5;
+  if(S.enemy.res.includes(el))return 0.6;
+  return 1;
+}
+function calcD(atk,def,mul,el){return Math.floor(atk*mul*elMod(el) - def*0.5 + Math.random()*8)}
 function popD(d,cls,tar){
   const t=document.querySelector(tar);if(!t)return;
   const p=document.createElement('div');p.style.cssText=`
@@ -943,7 +990,7 @@ function popD(d,cls,tar){
     font-family:Orbitron,sans-serif;font-weight:700;font-size:1.4rem;pointer-events:none;
     animation:popFl .8s ease both;z-index:100`;
   p.textContent=d;p.className=cls;
-  const c={dp:'#00e676',dk:'#ff9800',dh:'#00ff88'}[cls]||'#fff';
+  const c={dp:'#00e676',dk:'#ff9800',dh:'#00ff88',dw:'#f7d84b',dr:'#8a8f96'}[cls]||'#fff';
   p.style.color=c;p.style.textShadow=`0 0 8px ${c}`;
   document.getElementById('arena').appendChild(p);
   const st=p.style;st.setProperty('--dur','0.8s');
@@ -974,6 +1021,7 @@ function chromaFlash(){
 
 // ── WEB AUDIO API — SOUND DESIGN ──
 const AC=new(window.AudioContext||window.webkitAudioContext)();
+document.addEventListener('pointerdown',()=>{if(AC.state==='suspended')AC.resume();},{once:true});
 function playHit(){
   const o=AC.createOscillator(),g=AC.createGain();
   o.type='sine';o.frequency.setValueAtTime(200,AC.currentTime);
@@ -1063,8 +1111,10 @@ function startBattle(){
   const wave=WAVES[Math.min(S.wave-1,WAVES.length-1)];
   const eName=wave[Math.floor(Math.random()*wave.length)];
   const e=ENEMIES[eName];
-  const w={...e,maxHp:e.hp};
-  S.enemy=w;S.over=false;S.pTurn=false;S.pAtb=0;S.eAtb=0;
+  const scale=1+(S.wave-1)*0.05;
+  const hp=Math.round(e.hp*scale),atk=Math.round(e.atk*scale);
+  const w={...e,hp,atk,maxHp:hp};
+  S.enemy=w;S.over=false;S.pTurn=false;S.pAtb=0;S.eAtb=0;S.streak=0;
   S.player.hp=100;S.player.mp=50;S.player.limit=0;
   S.pStatus={};S.eStatus={};
   buildEnemySprite(w.spr);
@@ -1100,8 +1150,8 @@ function buildEnemySprite(spr){
     mech:['em-core','em-eye','em-scan','em-arm em-armL','em-arm em-armR','em-leg em-legL','em-leg em-legR','em-vent'],
     beast:['eb-body','eb-head','eb-eye','eb-eye eb-eye2','eb-tail','eb-leg eb-legA','eb-leg eb-legB','eb-leg eb-legC','eb-leg eb-legD'],
     alien:['ea-body','ea-head','ea-eye','ea-tent ea-tentL','ea-tent ea-tentR','ea-tent ea-tentL2','ea-tent ea-tentR2'],
-    boss:['eb2-body','eb2-head','eb2-eye','eb2-shoulder eb2-sL','eb2-shoulder eb2-sR','eb2-arm eb2-armL','eb2-arm eb2-armR'],
-    seph:['es-coat','es-body','es-wing','es-head','es-hair','es-blade'],
+    boss:['eb2-aura','eb2-body','eb2-head','eb2-eye','eb2-shoulder eb2-sL','eb2-shoulder eb2-sR','eb2-arm eb2-armL','eb2-arm eb2-armR'],
+    seph:['es-aura','es-coat','es-body','es-wing','es-head','es-hair','es-blade'],
   }[spr]||[];
   parts.forEach(p=>{const d=document.createElement('div');d.className=p;c.appendChild(d);});
 }
@@ -1222,13 +1272,11 @@ function renderHand(){
     if(!low)c.onclick=()=>selectCard(card);
     handWrap.appendChild(c);
   });
-  r.appendChild(handWrap);
-  const itemWrap=document.createElement('div');itemWrap.className='uno-hand';itemWrap.style.paddingTop='0';
   if(S.items.potion>0){const b=document.createElement('button');b.className='act act-itm';b.style.minWidth='110px';
-    b.innerHTML=`🧪 POTION×${S.items.potion}<span class="act-sub">+150 HP</span>`;b.onclick=doPotion;itemWrap.appendChild(b);}
+    b.innerHTML=`🧪 POTION×${S.items.potion}<span class="act-sub">+150 HP</span>`;b.onclick=doPotion;handWrap.appendChild(b);}
   if(S.items.ether>0){const b=document.createElement('button');b.className='act act-itm';b.style.minWidth='110px';
-    b.innerHTML=`🧿 ETHER×${S.items.ether}<span class="act-sub">+40 MP</span>`;b.onclick=doEther;itemWrap.appendChild(b);}
-  if(itemWrap.children.length)r.appendChild(itemWrap);
+    b.innerHTML=`🧿 ETHER×${S.items.ether}<span class="act-sub">+40 MP</span>`;b.onclick=doEther;handWrap.appendChild(b);}
+  r.appendChild(handWrap);
 }
 function selectCard(card){
   if(!S.pTurn||S.over)return;
@@ -1265,7 +1313,9 @@ function drawDiceUI(card){
   const wrap=document.createElement('div');wrap.className='dice-panel';
   const info=document.createElement('div');info.className='dice-info';
   const sc=S.rolled?scoreDice(S.dice):{mult:1,label:'ROLL TO BEGIN'};
-  info.innerHTML=`<span>${card.icon} ${card.name} — roll for power</span><span class="dice-score">${sc.label} ×${sc.mult.toFixed(2)}</span>`;
+  const momentum=1+Math.min(S.streak,5)*0.03;
+  const streakTag=S.streak>0?` <span style="color:var(--thunder)">🔥×${momentum.toFixed(2)}</span>`:'';
+  info.innerHTML=`<span>${card.icon} ${card.name} — roll for power${streakTag}</span><span class="dice-score">${sc.label} ×${sc.mult.toFixed(2)}</span>`;
   wrap.appendChild(info);
   const row=document.createElement('div');row.className='dice-row';
   S.dice.forEach((v,i)=>{
@@ -1301,7 +1351,12 @@ function resolveCard(card,mult,label){
   if(!S.pTurn||S.over)return;
   endTurn();
   if(card.mp>0)S.player.mp-=card.mp;
-  const tag=label?` — ${label}`:'';
+  let tag=label?` — ${label}`:'';
+  if(label){
+    const momentum=1+Math.min(S.streak,5)*0.03;
+    if(momentum>1){mult*=momentum;tag+=` (streak ×${momentum.toFixed(2)})`;}
+    if(label==='BUST')S.streak=0;else S.streak=Math.min(S.streak+1,5);
+  }
   switch(card.kind){
     case 'atk':{
       atkSlide('cw-p','cw-e');
@@ -1316,10 +1371,13 @@ function resolveCard(card,mult,label){
       S.stats.spells++;playMagic(card.el);
       let d=calcD(S.player.atk,S.enemy.def,(card.pow/30)*mult,card.el);
       if(card.el==='all')d=Math.floor(d*0.7);
-      popD(d,'dp','cw-e');S.enemy.hp-=d;
-      log(`${card.icon} ${card.name}${tag} hits for ${d}!`,'lm');
+      const weak=S.enemy.weak.includes(card.el),res=S.enemy.res.includes(card.el);
+      popD(d,weak?'dw':res?'dr':'dp','cw-e');S.enemy.hp-=d;
+      if(weak){screenShake();log(`${card.icon} ${card.name}${tag} — WEAKNESS! hits for ${d}!`,'lk');}
+      else if(res)log(`${card.icon} ${card.name}${tag} — resisted... hits for ${d}.`,'lm');
+      else log(`${card.icon} ${card.name}${tag} hits for ${d}!`,'lm');
       if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
-      chLim(8);S.stats.dealt+=d;updateBars();chkEnd();
+      chLim(weak?12:8);S.stats.dealt+=d;updateBars();chkEnd();
       break;
     }
     case 'heal':{
