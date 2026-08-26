@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MATERIA WARS</title>
+<title>UNTZEE WARS</title>
 <!--
   ╔══════════════════════════════════════════════════════╗
   ║           Made with love. For the fairy.             ║
@@ -91,6 +91,10 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .t-ded{font-size:0.6rem;color:rgba(168,230,207,0.5);letter-spacing:0.15em;font-style:italic;
   margin-bottom:30px;cursor:pointer;transition:color .2s}
 .t-ded:hover{color:var(--willow)}
+.t-lore{display:none;max-width:440px;margin:0 auto 18px;padding:12px 16px;text-align:left;
+  font-size:0.62rem;line-height:1.9;color:var(--txt2);letter-spacing:0.02em;
+  background:rgba(0,0,0,0.35);border:1px solid var(--rim2);border-left:2px solid var(--willow2)}
+.t-lore.show{display:block;animation:scIn .3s ease both}
 .t-press{font-family:'VT323',monospace;font-size:1.4rem;letter-spacing:0.2em;color:var(--willow);
   animation:blink 1.1s step-start infinite;cursor:pointer;margin-bottom:18px}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
@@ -348,7 +352,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .se-boss .eb2-armL{right:34px}.se-boss .eb2-armR{left:34px}
 .se-boss .eb2-aura{display:none}
 
-/* Sephiroth — pale one-winged angel */
+/* Ashveil — pale one-winged angel */
 .se-seph{width:70px;height:90px}
 .se-seph .es-coat{position:absolute;bottom:0;left:50%;transform:translateX(-50%);
   width:18px;height:54px;background:#1a1a2e;border:1px solid #5a5a8a}
@@ -582,10 +586,15 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .dice-score{color:var(--thunder);text-shadow:0 0 6px var(--thunder)}
 .dice-row{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
 .die{width:44px;height:44px;background:#eef2f5;border:2px solid #1a1a1a;border-radius:8px;
-  display:grid;place-items:center;font-size:1.3rem;font-weight:900;color:#111;cursor:pointer;
+  display:grid;place-items:center;cursor:pointer;
   transition:transform .15s,box-shadow .15s;user-select:none}
 .die.held{border-color:var(--thunder);box-shadow:0 0 10px var(--thunder);background:#fff3c4}
 .die:not(.held):hover{transform:translateY(-3px)}
+.die-q{font-size:1.3rem;font-weight:900;color:#8a8f96}
+.pip-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  width:30px;height:30px;gap:2px}
+.pip{border-radius:50%}
+.pip.on{background:#1a1a1a}
 .dice-btns{display:flex;gap:8px;flex-wrap:wrap}
 .dice-btns .act{flex:1;min-width:110px;padding:10px 8px;font-size:0.6rem}
 </style>
@@ -602,7 +611,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 
 <div id="game">
   <div id="hud">
-    <div class="hud-logo">MATERIA <span>WARS</span></div>
+    <div class="hud-logo">UNTZEE <span>WARS</span></div>
     <div id="hud-mid">⚔ BATTLE</div>
     <div class="hud-wave"><span id="wave-txt">WAVE <b id="wave-num">1</b></span></div>
   </div>
@@ -610,10 +619,11 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
   <!-- SCREENS -->
   <div id="sc-title" class="screen active">
     <div style="text-align:center">
-      <div class="t-logo">MATERIA</div>
+      <div class="t-logo">UNTZEE</div>
       <div class="t-logo">WARS</div>
       <div class="t-sub">⚔ ✨ 🧚</div>
-      <div class="t-ded" id="ded">Made with love.</div>
+      <div class="t-ded" id="ded">Made with love. (tap for the tale)</div>
+      <div class="t-lore" id="t-lore"></div>
       <div class="t-press" id="t-press">☆ PRESS SPACE ☆</div>
       <div class="t-waves" id="t-waves">
         <div class="t-waves-lbl">— SELECT WAVE —</div>
@@ -630,7 +640,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
           <div class="slot-row" id="slot-row"></div>
         </div>
         <div class="pnl">
-          <div class="pnl-hd">Materia</div>
+          <div class="pnl-hd">Untzee</div>
           <div class="mat-grid" id="mat-grid"></div>
         </div>
       </div>
@@ -727,16 +737,41 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 
 <script>
 // ════════════════════════════════════════════════════════════════════
-// MATERIA WARS — BATTLE SYSTEM
+// UNTZEE WARS — BATTLE SYSTEM
 // ════════════════════════════════════════════════════════════════════
 
 const PERSONAL=[
   '✨ A fairy never gives up.',
   '🌿 The willow remembers everything.',
-  '⚡ Materia flows through me.',
+  '⚡ Untzee flows through me.',
   '💫 This is my destiny.',
   '🗡️ For everyone waiting in the shadows.',
 ];
+
+const STORY_OPEN=[
+  "Seven ages ago the Willow Accord bound every fae-clan to guard the untzee crystals — twinned shards of dice-luck and card-fate that keep the world's elements from tearing loose.",
+  "When the Hollow Court broke the Accord, its iron legions marched south and the clans fell one grove at a time. Only Noom Wolliw escaped the fall of the Last Grove, a single shard sewn into her wing.",
+  "Now she walks alone toward Ashveil, the one-winged general who broke the Accord, betting every fight on the turn of a card and the fall of the dice.",
+];
+
+const WAVE_STORY=[
+  '📖 The border patrols have already heard the Hollow Court is on the march.',
+  '📖 Past the checkpoint, the old forest itself seems to be hiding from what comes next.',
+  '📖 The mechanized line looms ahead — the Court builds its soldiers now, it no longer breeds them.',
+  '📖 Refugee trails cross the road here. Wolliw presses on before the enemy finds them first.',
+  '📖 The Hollow Court\'s elite guard holds the last bridge before the capital.',
+  '📖 Twin war-engines block the capital gate. Beyond them, only the tower remains.',
+  '📖 At the tower\'s peak, a single silhouette waits with one wing unfurled.',
+];
+
+const ENEMY_FLAVOR={
+  trooper:'Conscripted from the border towns, armored in whatever the Court could spare.',
+  mech:'A hollow shell of a soldier, animated by a shard of stolen untzee-craft.',
+  beast:'Once a forest guardian, twisted feral by the Court\'s dark alchemy.',
+  alien:'A rift-caller summoned through a tear the Court cut in the world itself.',
+  boss:'A siege-engine built to grind fortress gates — and anything else — to rubble.',
+  seph:'The general who broke the Accord. He remembers every clan he ended.',
+};
 
 const MAT={
   fire:{name:'Fire',icon:'🔥',type:'dmg',el:'fire',col:'#ff4f1f',mp:8,pow:28,desc:'Single target flame'},
@@ -749,8 +784,8 @@ const MAT={
 };
 
 const COMBOS={
-  ffvii:{name:'Omnislash',icon:'💫',mat:['fire','ice','thunder','wind'],mp:24,effect:'limit'},
-  meteor:{name:'Meteor Burst',icon:'☄️',mat:['fire','fire','wind'],mp:18,effect:'limit'},
+  bloom:{name:'Fourfold Bloom',icon:'🌪️',mat:['fire','ice','thunder','wind'],mp:24,effect:'limit'},
+  ember:{name:'Twin Ember',icon:'🔥',mat:['fire','wind'],mp:18,effect:'limit'},
 };
 
 const ENEMIES={
@@ -758,8 +793,8 @@ const ENEMIES={
   mech:{name:'Combat Mech',spr:'mech',hp:60,mp:20,atk:14,def:8,spd:1.2,weak:['thunder'],res:['fire']},
   beast:{name:'Savage Beast',spr:'beast',hp:55,mp:0,atk:16,def:5,spd:1.6,weak:['wind'],res:[]},
   alien:{name:'Alien Entity',spr:'alien',hp:50,mp:25,atk:12,def:7,spd:1.3,weak:['dark'],res:['ice']},
-  boss:{name:'Motor Ball',spr:'boss',hp:95,mp:30,atk:18,def:10,spd:1.1,weak:['ice','wind'],res:['fire']},
-  seph:{name:'Sephiroth',spr:'seph',hp:120,mp:50,atk:22,def:12,spd:1.4,weak:[],res:[]},
+  boss:{name:'Iron Warden',spr:'boss',hp:95,mp:30,atk:18,def:10,spd:1.1,weak:['ice','wind'],res:['fire']},
+  seph:{name:'Ashveil',spr:'seph',hp:120,mp:50,atk:22,def:12,spd:1.4,weak:[],res:[]},
 };
 
 const ARENA_TINTS={
@@ -799,6 +834,50 @@ const WAVES=[
   ['boss','boss'],
   ['seph'],
 ];
+
+// ── AMBIENT PARTICLES ──
+(function initParticles(){
+  const cv=document.getElementById('particle-cv');
+  if(!cv)return;
+  const ctx=cv.getContext('2d');
+  let w=0,h=0,parts=[];
+  function resize(){
+    w=cv.width=cv.offsetWidth||window.innerWidth;
+    h=cv.height=cv.offsetHeight||window.innerHeight;
+  }
+  function spawn(){
+    return{
+      x:Math.random()*w,y:h+Math.random()*40,
+      r:1+Math.random()*2,
+      vy:0.25+Math.random()*0.5,
+      vx:(Math.random()-0.5)*0.4,
+      a:0.15+Math.random()*0.35,
+      hue:Math.random()<0.7?'168,230,207':'255,140,90',
+      wob:Math.random()*Math.PI*2,
+    };
+  }
+  function init(){
+    resize();
+    const n=Math.min(60,Math.floor((w*h)/22000));
+    parts=Array.from({length:n},()=>{const p=spawn();p.y=Math.random()*h;return p;});
+  }
+  function tickParticles(){
+    ctx.clearRect(0,0,w,h);
+    parts.forEach(p=>{
+      p.wob+=0.02;
+      p.y-=p.vy;p.x+=p.vx+Math.sin(p.wob)*0.15;
+      if(p.y<-10){Object.assign(p,spawn());p.y=h+10;}
+      if(p.x<-10)p.x=w+10;if(p.x>w+10)p.x=-10;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(${p.hue},${p.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(tickParticles);
+  }
+  window.addEventListener('resize',resize);
+  init();
+  requestAnimationFrame(tickParticles);
+})();
 
 // ── LOG ──
 function log(txt,cls='lo'){
@@ -860,7 +939,7 @@ function playCrit(){
   const o=AC.createOscillator(),g=AC.createGain();
   o.type='triangle';o.frequency.setValueAtTime(350,AC.currentTime);
   o.frequency.exponentialRampToValueAtTime(150,AC.currentTime+0.15);
-  g.gain.setValueAtTime(0.4,AC.currentTime);g.gain.exponentialRampToValueAtTime(0,AC.currentTime+0.2);
+  g.gain.setValueAtTime(0.4,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+0.2);
   o.connect(g);g.connect(AC.destination);
   o.start(AC.currentTime);o.stop(AC.currentTime+0.2);
 }
@@ -872,7 +951,7 @@ function playMagic(el){
   o.frequency.exponentialRampToValueAtTime(f*1.8,AC.currentTime+0.08);
   o.frequency.exponentialRampToValueAtTime(f*0.5,AC.currentTime+0.16);
   f2.type='lowpass';f2.frequency.setValueAtTime(1200,AC.currentTime);
-  g.gain.setValueAtTime(0.25,AC.currentTime);g.gain.exponentialRampToValueAtTime(0,AC.currentTime+0.18);
+  g.gain.setValueAtTime(0.25,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+0.18);
   o.connect(f2);f2.connect(g);g.connect(AC.destination);
   o.start(AC.currentTime);o.stop(AC.currentTime+0.18);
 }
@@ -881,7 +960,7 @@ function playLimitSound(){
   o.type='sawtooth';o.frequency.setValueAtTime(500,AC.currentTime);
   o.frequency.exponentialRampToValueAtTime(800,AC.currentTime+0.1);
   o.frequency.exponentialRampToValueAtTime(200,AC.currentTime+0.25);
-  g.gain.setValueAtTime(0.35,AC.currentTime);g.gain.exponentialRampToValueAtTime(0,AC.currentTime+0.3);
+  g.gain.setValueAtTime(0.35,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+0.3);
   o.connect(g);g.connect(AC.destination);
   o.start(AC.currentTime);o.stop(AC.currentTime+0.3);
 }
@@ -892,28 +971,47 @@ function applyED(d,cls){
   if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
   updateBars();
 }
+function dealToPlayer(d){
+  if(S.player.wall)d=Math.floor(d*0.5);
+  S.player.hp-=d;
+  if(S.player.hp<=0){S.player.hp=0;S.over=true;onLose();}
+  if(S.player.wall){
+    S.player.wallT--;
+    if(S.player.wallT<=0){S.player.wall=false;removeStatus('p-status','wall');}
+  }
+  return d;
+}
+function enemyAtkHit(mult,cls,verb){
+  atkSlide('cw-e','cw-p');
+  const crit=Math.random()<0.12;
+  let d=calcD(S.enemy.atk,S.player.def,mult);if(crit)d=Math.floor(d*1.5);
+  playHit();
+  setTimeout(()=>{
+    hitFl('cw-p');d=dealToPlayer(d);
+    log(`${S.enemy.name} ${verb} for ${d}!`,cls);updateBars();chkEnd();
+  },230);
+}
 function enemyTurn(){
   if(S.over)return;
-  const choices=['atk','atk','atk','mag','item'];
-  const act=choices[Math.floor(Math.random()*choices.length)];
-  if(act==='atk'){
-    atkSlide('cw-e','cw-p');
-    const crit=Math.random()<0.12;
-    let d=calcD(S.enemy.atk,S.player.def,0.95);if(crit)d=Math.floor(d*1.5);
-    playHit();
-    setTimeout(()=>{
-      hitFl('cw-p');S.player.hp-=d;if(S.player.hp<=0){S.player.hp=0;S.over=true;onLose();}
-      log(S.enemy.name+' attacks for '+d+'!','ls');updateBars();chkEnd();
-    },230);
+  if(S.enemy.mp>=10&&Math.random()<0.3){
+    S.enemy.mp-=10;playMagic('dark');
+    enemyAtkHit(1.15,'ls','casts a dark bolt');
+    return;
   }
+  if(S.enemy.hp<S.enemy.maxHp*0.35&&Math.random()<0.35){
+    const heal=Math.floor(S.enemy.maxHp*0.15);
+    S.enemy.hp=Math.min(S.enemy.maxHp,S.enemy.hp+heal);
+    log(`${S.enemy.name} regenerates ${heal} HP!`,'lh');
+    updateBars();chkEnd();
+    return;
+  }
+  enemyAtkHit(0.95,'ls','attacks');
 }
 function chLim(v){S.player.limit=Math.min(100,S.player.limit+v);updateBars()}
 function chkEnd(){if(S.over){clearInterval(S.atbT)}}
-function checkEnd2(){if(S.over){clearInterval(S.atbT)}}
 
 // ── MATCH ──
 function startBattle(){
-  console.log('startBattle called');
   if(S.wave>WAVES.length)S.wave=1;
   const wave=WAVES[Math.min(S.wave-1,WAVES.length-1)];
   const eName=wave[Math.floor(Math.random()*wave.length)];
@@ -922,7 +1020,6 @@ function startBattle(){
   S.enemy=w;S.over=false;S.pTurn=false;S.pAtb=0;S.eAtb=0;
   S.player.hp=100;S.player.mp=50;S.player.limit=0;
   S.pStatus={};S.eStatus={};
-  console.log('Player speed: '+S.player.spd+', will add '+S.player.spd*2.2+' per tick');
   buildEnemySprite(w.spr);
   document.getElementById('b-ename').textContent='⚔ '+w.name;
   document.getElementById('arena-ename').textContent=w.name;
@@ -936,9 +1033,10 @@ function startBattle(){
   
   showSc('sc-battle');
   log('BATTLE START — '+w.name+' appears!','ls');
+  if(WAVE_STORY[S.wave-1])log(WAVE_STORY[S.wave-1],'lm');
   if(S.combo)log(`✨ ${S.combo.icon} ${S.combo.name} armed!`,'lc');
   log('🧚 Noom Wolliw takes the field.','lo');
-  if(S.wave===7)log('🗡️ "I will never be a memory." — Sephiroth','ls');
+  if(S.wave===7)log('🗡️ "The willow forgets no one." — Ashveil','ls');
   clearInterval(S.atbT);S.atbT=setInterval(tick,75);
 }
 
@@ -1024,8 +1122,7 @@ function updateWeakRow(){
 // ── TICK ──
 function tick(){
   if(S.over)return;
-  console.log('tick: pTurn='+S.pTurn+' pAtb='+S.pAtb.toFixed(1));
-  if(!S.pTurn){S.pAtb+=S.player.spd*2.2;if(S.pAtb>=100){S.pAtb=100;S.pTurn=true;console.log('ATB READY, calling onReady');onReady();}}
+  if(!S.pTurn){S.pAtb+=S.player.spd*2.2;if(S.pAtb>=100){S.pAtb=100;S.pTurn=true;onReady();}}
   S.eAtb+=S.enemy.spd*1.9;
   if(S.eAtb>=100&&!S.over){S.eAtb=0;enemyTurn();}
   updateBars();
@@ -1059,7 +1156,7 @@ function buildHand(){
         name:m.name,icon:m.icon,col:m.col,mp:m.mp,pow:m.pow,el:m.el});
     });
   }
-  if(S.player.limit>=100)hand.push({kind:'limit',name:'Limit Break',icon:'💥',col:'#ff6d00',mp:0});
+  if(S.player.limit>=100)hand.push({kind:'limit',name:'Willowbloom',icon:'🌸',col:'#ff6d00',mp:0});
   return hand;
 }
 function renderHand(){
@@ -1093,6 +1190,13 @@ function selectCard(card){
 }
 
 // ── YAHTZEE DICE — POWER ROLL ──
+const PIP_LAYOUTS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+function pipHTML(v){
+  const cells=PIP_LAYOUTS[v]||[];
+  let html='<div class="pip-grid">';
+  for(let i=0;i<9;i++)html+=`<span class="pip${cells.includes(i)?' on':''}"></span>`;
+  return html+'</div>';
+}
 function scoreDice(dice){
   const counts={};dice.forEach(v=>counts[v]=(counts[v]||0)+1);
   const vals=Object.values(counts).sort((a,b)=>b-a);
@@ -1117,7 +1221,7 @@ function drawDiceUI(card){
   const row=document.createElement('div');row.className='dice-row';
   S.dice.forEach((v,i)=>{
     const d=document.createElement('div');d.className='die'+(S.held[i]?' held':'');
-    d.textContent=S.rolled?v:'?';
+    d.innerHTML=S.rolled?pipHTML(v):'<span class="die-q">?</span>';
     if(S.rolled&&S.rollsLeft>0)d.onclick=()=>{S.held[i]=!S.held[i];drawDiceUI(card);};
     row.appendChild(d);
   });
@@ -1174,7 +1278,7 @@ function resolveCard(card,mult,label){
       const a=Math.floor((card.pow+30)*mult);
       S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
       popD(a,'dh','cw-p');log(`${card.icon} ${card.name}${tag} restores ${a} HP!`,'lh');
-      updateBars();checkEnd2();
+      updateBars();chkEnd();
       break;
     }
     case 'drawtwo':{
@@ -1201,8 +1305,9 @@ function resolveCard(card,mult,label){
       break;
     }
     case 'buff':{
-      S.player.wallT=4;S.player.wall=true;
-      addStatus('p-status','wall','🛡️ Wall');log(`${card.icon} Wall rises!`,'lh');
+      S.player.wallT=4;
+      if(!S.player.wall){S.player.wall=true;addStatus('p-status','wall','🛡️ Wall');}
+      log(`${card.icon} Wall rises!`,'lh');
       updateBars();
       break;
     }
@@ -1212,7 +1317,7 @@ function resolveCard(card,mult,label){
       setTimeout(()=>{
         let d=calcD(S.player.atk*2.5,S.enemy.def,1.5);
         popD(d,'dk','cw-e');S.enemy.hp-=d;
-        log(`💥 BUSTER LIMIT! ${d} damage!`,'lk');
+        log(`🌸 WILLOWBLOOM! ${d} damage!`,'lk');
         if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}S.stats.dealt+=d;updateBars();chkEnd();
       },300);
       break;
@@ -1222,16 +1327,20 @@ function resolveCard(card,mult,label){
 function doPotion(){
   if(!S.pTurn||S.over||S.items.potion<1)return;endTurn();
   S.items.potion--;const a=150;S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
-  popD(a,'dh','cw-p');log('🧪 Potion restores '+a+' HP!','lh');updateBars();checkEnd2();
+  popD(a,'dh','cw-p');log('🧪 Potion restores '+a+' HP!','lh');updateBars();chkEnd();
 }
 function doEther(){
   if(!S.pTurn||S.over||S.items.ether<1)return;endTurn();
   S.items.ether--;const a=40;S.player.mp=Math.min(S.player.maxMp,S.player.mp+a);
-  log('🧿 Ether restores '+a+' MP!','lh');updateBars();checkEnd2();
+  log('🧿 Ether restores '+a+' MP!','lh');updateBars();chkEnd();
 }
 function addStatus(row,type,label){
   const r=document.getElementById(row);if(!r)return;
   const e=document.createElement('div');e.className=`sbadge ${type}`;e.textContent=label;r.appendChild(e);
+}
+function removeStatus(row,type){
+  const r=document.getElementById(row);if(!r)return;
+  const b=r.querySelector('.sbadge.'+type);if(b)b.remove();
 }
 
 // ── RESULTS ──
@@ -1239,13 +1348,21 @@ function onWin(){
   clearInterval(S.atbT);
   log(`✨ ${S.enemy.name} defeated!`,'lc');
   log(`📊 Dealt ${S.stats.dealt} damage. ${S.stats.crits} critical hits!`,'lm');
+  const wasFinal=S.wave===7;
   S.wave++;
-  setTimeout(()=>{if(S.wave>7){log('🏆 YOU WIN!','lk');showSc('sc-prep');}
-    else{showSc('sc-prep');}},2000);
+  if(wasFinal){
+    setTimeout(()=>log('🏆 Ashveil falls, and the last wing folds still.','lk'),1200);
+    setTimeout(()=>log('📖 The untzee shard in Wolliw\'s wing flares once, then settles into an ordinary, quiet light.','lm'),2600);
+    setTimeout(()=>log('📖 The Hollow Court\'s legions scatter without their general. The willow, at long last, stops waiting.','lm'),4200);
+    setTimeout(()=>showSc('sc-prep'),6200);
+  }else{
+    setTimeout(()=>showSc('sc-prep'),2000);
+  }
 }
 function onLose(){
   clearInterval(S.atbT);
   log(`💔 Noom Wolliw was defeated...`,'ls');
+  log(`📖 The shard dims, but doesn't go dark. There will be another fight.`,'lm');
   log(`📊 Made it to Wave ${S.wave}.`,'lm');
   S.wave=1;
   setTimeout(()=>{showSc('sc-prep');},2000);
@@ -1257,13 +1374,33 @@ function showSc(id){
   document.getElementById(id).classList.add('active');
 }
 
-// ── PREP SCREEN ──
-function showPrep(){
+// ── COMBOS ──
+function computeCombo(){
+  const have=new Set(S.eq);
+  S.combo=null;
+  for(const key of Object.keys(COMBOS)){
+    const need=[...new Set(COMBOS[key].mat)];
+    if(need.every(el=>have.has(el))){S.combo=COMBOS[key];break;}
+  }
+}
+
+// ── TITLE SCREEN ──
+function revealWaveSelect(){
   const grid=document.getElementById('wave-grid');grid.innerHTML='';
   for(let i=1;i<=7;i++){const b=document.createElement('div');b.className='t-wb';
     b.textContent=`WAVE ${i}`;b.onclick=()=>{S.wave=i;showPrep();};grid.appendChild(b);}
   document.getElementById('t-waves').classList.add('show');
+}
+function toggleLore(){
+  const l=document.getElementById('t-lore');
+  if(l.classList.contains('show')){l.classList.remove('show');return;}
+  l.innerHTML=STORY_OPEN.map(p=>`<p style="margin-bottom:8px">${p}</p>`).join('');
+  l.classList.add('show');
+}
 
+// ── PREP SCREEN ──
+function showPrep(){
+  computeCombo();
   const slots=document.getElementById('slot-row');slots.innerHTML='';
   for(let i=0;i<4;i++){
     const sl=document.createElement('div');sl.className='slot'+(i<S.eq.length?' filled':'');
@@ -1294,6 +1431,7 @@ function showPrep(){
     const ew=document.createElement('div');ew.className='ei-wrap';
     ew.innerHTML=`<div class="ei-emj">${{trooper:'🪖',mech:'⚙️',beast:'🦾',alien:'👽',boss:'💣',seph:'⚔️'}[id]}</div>
       <div><div class="ei-name">${e.name}</div><div class="ei-st">HP: <b>${e.hp}</b> ATK: <b>${e.atk}</b> DEF: <b>${e.def}</b></div>
+      ${ENEMY_FLAVOR[id]?`<div class="ei-tip" style="margin:4px 0 0">${ENEMY_FLAVOR[id]}</div>`:''}
       ${e.weak.length?`<div class="ei-tags">${e.weak.map(w=>`<div class="ei-tag">Weak: ${w}</div>`).join('')}</div>`:''}
       </div>`;
     el.appendChild(ew);
@@ -1302,8 +1440,10 @@ function showPrep(){
   const cg=document.createElement('div');cg.className='ei-wrap';cg.style.background='rgba(0,0,0,0.5)';
   cg.style.borderColor='var(--thunder)';
   cg.innerHTML=`<div class="ei-emj">✨</div><div><div class="ei-name" style="color:var(--thunder)">Combos</div>
-    <div class="ei-st">Equip 3+ matching materia to unlock combo effects. Improves with wave.</div>
-    ${Object.keys(COMBOS).map(cid=>{const c=COMBOS[cid];return `<div class="ei-tip">${c.icon} ${c.name} (${c.mat.join(', ')})</div>`;}).join('')}
+    <div class="ei-st">Equip every orb a fusion needs to unlock its card in battle.</div>
+    ${Object.keys(COMBOS).map(cid=>{const c=COMBOS[cid];const need=[...new Set(c.mat)];
+      const unlocked=need.every(elId=>S.eq.includes(elId));
+      return `<div class="ei-tip"${unlocked?' style="color:var(--thunder);border-left-color:var(--thunder)"':''}>${c.icon} ${c.name} (${need.map(elId=>MAT[elId].icon).join(' ')})${unlocked?' — READY':''}</div>`;}).join('')}
     </div>`;
   el.appendChild(cg);
 
@@ -1312,10 +1452,10 @@ function showPrep(){
 
 // ── INIT ──
 document.getElementById('btn-start').onclick=startBattle;
-document.getElementById('t-press').onclick=showPrep;
-document.getElementById('ded').onclick=showPrep;
+document.getElementById('t-press').onclick=revealWaveSelect;
+document.getElementById('ded').onclick=toggleLore;
 document.addEventListener('keydown',e=>{
-  if(e.code==='Space')showPrep();
+  if(e.code==='Space')revealWaveSelect();
   if(!S.pTurn)return;
   const cards=document.querySelectorAll('.uno-card:not(.disabled)');
   if(cards.length&&e.key>='1'&&e.key<='9'){cards[parseInt(e.key)-1]?.click();return;}
@@ -1332,9 +1472,6 @@ st.textContent=`
 .dp{color:#00e676!important}.dk{color:#ff9800!important}.dh{color:#00ff88!important}
 `;
 document.head.appendChild(st);
-
-// Start
-showPrep();
 </script>
 </body>
 </html>
