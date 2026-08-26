@@ -187,6 +187,21 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 #arena-far{position:absolute;inset:0;opacity:0.4;background:repeating-linear-gradient(
   90deg,#1a0f2e 0px,#1a0f2e 2px,#2d1b3d 2px,#2d1b3d 4px)}
 
+/* Midground — drifting ruin silhouettes, parallax depth layer */
+#arena-mid{
+  position:absolute;bottom:56px;left:-10%;right:-10%;height:110px;
+  background:
+    linear-gradient(105deg,transparent 0 38%,#140a24 38% 46%,transparent 46%),
+    linear-gradient(75deg,transparent 0 58%,#140a24 58% 64%,transparent 64%),
+    linear-gradient(95deg,transparent 0 74%,#180c28 74% 84%,transparent 84%),
+    linear-gradient(85deg,transparent 0 12%,#180c28 12% 20%,transparent 20%);
+  clip-path:polygon(0 100%,4% 62%,10% 78%,16% 48%,24% 70%,30% 40%,38% 66%,46% 30%,
+    54% 60%,62% 22%,70% 58%,78% 34%,86% 64%,94% 44%,100% 70%,100% 100%);
+  opacity:0.55;filter:blur(0.5px);
+  animation:midDrift 40s linear infinite;
+}
+@keyframes midDrift{0%{transform:translateX(0)}100%{transform:translateX(-8%)}}
+
 /* Minimal city silhouette */
 #arena-city{
   position:absolute;bottom:0;left:0;right:0;height:60px;
@@ -219,9 +234,26 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 }
 #arena-floor::before{display:none}
 
-/* No glow spots */
-#glow-p{display:none}
-#glow-e{display:none}
+/* Ambient ground-light pools — adds depth beneath each combatant */
+#glow-p,#glow-e{
+  position:absolute;bottom:42px;width:130px;height:56px;
+  border-radius:50%;pointer-events:none;filter:blur(6px);
+  transition:background .6s ease;z-index:1;
+}
+#glow-p{left:12%;transform:translateX(-50%);
+  background:radial-gradient(ellipse at center,var(--willow-glow) 0%,transparent 72%)}
+#glow-e{right:12%;transform:translateX(50%);
+  background:radial-gradient(ellipse at center,rgba(255,79,31,0.3) 0%,transparent 72%)}
+
+/* Contact shadows — grounds the sprites, squashes on the attack lunge */
+.spr-p::after,.spr-e::after{
+  content:'';position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
+  width:70%;height:10px;border-radius:50%;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,0.55) 0%,transparent 75%);
+  transition:width .2s,opacity .2s;
+}
+.cw.attack-r .spr-p::after,.cw.attack-l .spr-p::after,
+.cw.attack-r .spr-e::after,.cw.attack-l .spr-e::after{width:46%;opacity:0.6}
 
 /* Tint — subtle only */
 #arena-tint{position:absolute;inset:0;pointer-events:none;transition:background 0.8s ease;opacity:0.06}
@@ -559,16 +591,21 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
    UNO HAND — CARD-BASED ACTION SELECT
 ════════════════════════════════════ */
 .uno-hand{display:flex;gap:9px;flex-wrap:wrap;padding:12px 14px;align-items:center;
-  background:rgba(0,0,0,0.4);border-top:2px solid var(--rim)}
+  background:rgba(0,0,0,0.4);border-top:2px solid var(--rim);perspective:700px}
 .uno-card{
-  --card-col:#888;width:66px;height:94px;border-radius:11px;flex-shrink:0;cursor:pointer;
+  --card-col:#888;--tilt:0deg;width:66px;height:94px;border-radius:11px;flex-shrink:0;cursor:pointer;
   position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;
   background:linear-gradient(160deg,var(--card-col),color-mix(in srgb,var(--card-col) 60%,#000));
   border:3px solid rgba(255,255,255,0.85);box-shadow:0 4px 10px rgba(0,0,0,0.55),inset 0 0 12px rgba(255,255,255,0.12);
-  transition:transform .15s ease,box-shadow .15s ease;
+  transform:rotate(var(--tilt));transform-style:preserve-3d;
+  transition:transform .18s ease,box-shadow .18s ease;
 }
-.uno-card:hover{transform:translateY(-9px) rotate(-1deg);box-shadow:0 10px 18px rgba(0,0,0,0.6),0 0 14px var(--card-col)}
-.uno-card.disabled{opacity:0.32;cursor:not-allowed;filter:grayscale(0.7);transform:none;box-shadow:none}
+.uno-card:nth-child(3n+1){--tilt:-3deg}
+.uno-card:nth-child(3n+2){--tilt:1deg}
+.uno-card:nth-child(3n+3){--tilt:3deg}
+.uno-card:hover{transform:rotate(var(--tilt)) translateY(-10px) rotateX(14deg) scale(1.06);
+  box-shadow:0 14px 22px rgba(0,0,0,0.65),0 0 16px var(--card-col)}
+.uno-card.disabled{opacity:0.32;cursor:not-allowed;filter:grayscale(0.7);transform:rotate(var(--tilt));box-shadow:none}
 .uno-card::before{content:'';position:absolute;inset:6px;border-radius:50%/38%;
   background:rgba(255,255,255,0.14);transform:rotate(-18deg)}
 .uc-corner{position:absolute;top:4px;left:6px;font-size:0.6rem;color:#fff;text-shadow:0 0 3px #000}
@@ -584,12 +621,17 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .dice-info{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;
   font-family:'Orbitron',sans-serif;font-size:0.58rem;letter-spacing:0.08em;color:var(--txt)}
 .dice-score{color:var(--thunder);text-shadow:0 0 6px var(--thunder)}
-.dice-row{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
-.die{width:44px;height:44px;background:#eef2f5;border:2px solid #1a1a1a;border-radius:8px;
-  display:grid;place-items:center;cursor:pointer;
+.dice-row{display:flex;gap:9px;justify-content:center;flex-wrap:wrap;position:relative;padding:4px 0 12px}
+.dice-row::before{content:'';position:absolute;left:14%;right:14%;bottom:0;height:10px;
+  background:radial-gradient(ellipse at center,rgba(0,0,0,0.45) 0%,transparent 78%);filter:blur(1.5px)}
+.die{width:44px;height:44px;border-radius:8px;border:2px solid #1a1a1a;
+  background:linear-gradient(160deg,#ffffff,#d6dbe0);
+  box-shadow:0 3px 0 #aeb5bb,0 6px 8px rgba(0,0,0,0.4);
+  display:grid;place-items:center;cursor:pointer;position:relative;
   transition:transform .15s,box-shadow .15s;user-select:none}
-.die.held{border-color:var(--thunder);box-shadow:0 0 10px var(--thunder);background:#fff3c4}
-.die:not(.held):hover{transform:translateY(-3px)}
+.die.held{border-color:var(--thunder);background:linear-gradient(160deg,#fff8dc,#ffe58a);
+  box-shadow:0 3px 0 #c9a227,0 0 12px var(--thunder),0 6px 10px rgba(0,0,0,0.4)}
+.die:not(.held):hover{transform:translateY(-4px);box-shadow:0 7px 0 #aeb5bb,0 10px 14px rgba(0,0,0,0.5)}
 .die-q{font-size:1.3rem;font-weight:900;color:#8a8f96}
 .pip-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
   width:30px;height:30px;gap:2px}
@@ -658,6 +700,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
     <!-- ARENA -->
     <div id="arena">
       <div id="arena-far">
+        <div id="arena-mid"></div>
         <div id="arena-city"></div>
       </div>
       <div id="arena-mako">
@@ -846,19 +889,21 @@ const WAVES=[
     h=cv.height=cv.offsetHeight||window.innerHeight;
   }
   function spawn(){
+    const far=Math.random()<0.55;
     return{
       x:Math.random()*w,y:h+Math.random()*40,
-      r:1+Math.random()*2,
-      vy:0.25+Math.random()*0.5,
-      vx:(Math.random()-0.5)*0.4,
-      a:0.15+Math.random()*0.35,
+      r:far?0.6+Math.random()*1.1:1.8+Math.random()*2.6,
+      vy:far?0.12+Math.random()*0.22:0.35+Math.random()*0.7,
+      vx:(Math.random()-0.5)*(far?0.25:0.5),
+      a:far?0.08+Math.random()*0.14:0.18+Math.random()*0.32,
       hue:Math.random()<0.7?'168,230,207':'255,140,90',
       wob:Math.random()*Math.PI*2,
+      blur:far?0:1+Math.random()*1.5,
     };
   }
   function init(){
     resize();
-    const n=Math.min(60,Math.floor((w*h)/22000));
+    const n=Math.min(70,Math.floor((w*h)/20000));
     parts=Array.from({length:n},()=>{const p=spawn();p.y=Math.random()*h;return p;});
   }
   function tickParticles(){
@@ -868,10 +913,12 @@ const WAVES=[
       p.y-=p.vy;p.x+=p.vx+Math.sin(p.wob)*0.15;
       if(p.y<-10){Object.assign(p,spawn());p.y=h+10;}
       if(p.x<-10)p.x=w+10;if(p.x>w+10)p.x=-10;
+      ctx.filter=p.blur?`blur(${p.blur}px)`:'none';
       ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
       ctx.fillStyle=`rgba(${p.hue},${p.a})`;
       ctx.fill();
     });
+    ctx.filter='none';
     requestAnimationFrame(tickParticles);
   }
   window.addEventListener('resize',resize);
@@ -1024,6 +1071,8 @@ function startBattle(){
   document.getElementById('b-ename').textContent='⚔ '+w.name;
   document.getElementById('arena-ename').textContent=w.name;
   document.getElementById('arena-tint').style.background=ARENA_TINTS[w.spr]||'rgba(255,79,31,0.12)';
+  document.getElementById('glow-p').style.background=
+    `radial-gradient(ellipse at center,${GLOW_P_COLS[w.spr]||'var(--willow-glow)'} 0%,transparent 72%)`;
   buildSegBars();renderLoadout();updateWeakRow();updateBars();
   document.getElementById('blog').innerHTML='';
   
