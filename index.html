@@ -74,7 +74,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 
 /* ── SCREENS ── */
 .screen{display:none;flex:1;flex-direction:column;overflow:hidden;animation:scIn .3s ease both}
-.screen.active{display:flex}
+.screen.active{display:flex;opacity:1!important}
 @keyframes scIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 
 /* ════════════════════════════════════
@@ -708,6 +708,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
       <div class="t-logo">UNTZEE</div>
       <div class="t-logo">WARS</div>
       <div class="t-sub">⚔ ✨ 🧚</div>
+      <div class="t-ded" id="best-wave" style="display:none"></div>
       <div class="t-ded" id="ded">Made with love. (tap for the tale)</div>
       <div class="t-lore" id="t-lore"></div>
       <div class="t-press" id="t-press">☆ PRESS SPACE ☆</div>
@@ -959,6 +960,26 @@ let S={
   streak:0,tauntFired:new Set(),maxWaveCleared:0,
 };
 
+// ── SAVE / LOAD ──
+const SAVE_KEY='untzee-save-v1';
+function saveProgress(){
+  try{
+    localStorage.setItem(SAVE_KEY,JSON.stringify({
+      maxWaveCleared:S.maxWaveCleared,eq:S.eq,items:S.items,
+    }));
+  }catch(e){/* storage unavailable — progress just won't persist */}
+}
+function loadProgress(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw)return;
+    const data=JSON.parse(raw);
+    if(typeof data.maxWaveCleared==='number')S.maxWaveCleared=data.maxWaveCleared;
+    if(Array.isArray(data.eq))S.eq=data.eq.filter(id=>MAT[id]).slice(0,4);
+    if(data.items&&typeof data.items.potion==='number'&&typeof data.items.ether==='number')S.items=data.items;
+  }catch(e){/* corrupt or unavailable — keep defaults */}
+}
+
 const WAVES=[
   ['trooper','trooper','mech'],
   ['beast','alien'],
@@ -1151,9 +1172,18 @@ function enemyAtkHit(mult,cls,verb){
 }
 function enemyTurn(){
   if(S.over)return;
+  if(S.eStatus.slow){
+    S.eStatus.slow.t--;
+    if(S.eStatus.slow.t<=0){delete S.eStatus.slow;removeStatus('e-status','slow');}
+  }
   if(S.enemy.mp>=10&&Math.random()<0.3){
     S.enemy.mp-=10;playMagic('dark');
     enemyAtkHit(1.15,'ls','casts a dark bolt');
+    if(!S.pStatus.silence&&Math.random()<0.4){
+      S.pStatus.silence={t:1};
+      addStatus('p-status','silence','🔇 Silenced');
+      setTimeout(()=>log('🔇 The dark bolt leaves your fingers numb — spells falter next turn.','lm'),260);
+    }
     return;
   }
   if(S.enemy.hp<S.enemy.maxHp*0.35&&Math.random()<0.35){
@@ -1178,7 +1208,7 @@ function startBattle(){
   const hp=Math.round(e.hp*scale),atk=Math.round(e.atk*scale);
   const w={...e,hp,atk,maxHp:hp};
   S.enemy=w;S.over=false;S.pTurn=false;S.pAtb=0;S.eAtb=0;S.streak=0;S.tauntFired=new Set();
-  S.player.hp=100;S.player.mp=50;S.player.limit=0;
+  S.player.hp=100;S.player.mp=50;S.player.limit=0;S.player.wall=false;S.player.wallT=0;
   S.pStatus={};S.eStatus={};
   buildEnemySprite(w.spr);
   document.getElementById('b-ename').textContent='⚔ '+w.name;
@@ -1188,6 +1218,8 @@ function startBattle(){
     `radial-gradient(ellipse at center,${GLOW_P_COLS[w.spr]||'var(--willow-glow)'} 0%,transparent 72%)`;
   buildSegBars();renderLoadout();updateWeakRow();updateBars();
   document.getElementById('blog').innerHTML='';
+  document.getElementById('p-status').innerHTML='';
+  document.getElementById('e-status').innerHTML='';
   
   // Initialize turn indicators
   document.getElementById('p-turn-ind').classList.remove('active');
@@ -1288,7 +1320,7 @@ function updateWeakRow(){
 function tick(){
   if(S.over)return;
   if(!S.pTurn){S.pAtb+=S.player.spd*2.2;if(S.pAtb>=100){S.pAtb=100;S.pTurn=true;onReady();}}
-  S.eAtb+=S.enemy.spd*1.9;
+  S.eAtb+=S.enemy.spd*1.9*(S.eStatus.slow?0.55:1);
   if(S.eAtb>=100&&!S.over){S.eAtb=0;enemyTurn();}
   updateBars();
 }
@@ -1301,6 +1333,10 @@ function onReady(){
 // ── ACTIONS ──
 function endTurn(){
   S.pTurn=false;S.pAtb=0;S.pendingCard=null;
+  if(S.pStatus.silence){
+    S.pStatus.silence.t--;
+    if(S.pStatus.silence.t<=0){delete S.pStatus.silence;removeStatus('p-status','silence');}
+  }
   const l=document.getElementById('atb-lbl');l.textContent='ATB CHARGING...';l.className='wait';
   document.getElementById('arow').innerHTML='';
 }
@@ -1331,11 +1367,13 @@ function renderHand(){
   S.hand=buildHand();
   S.hand.forEach(card=>{
     const low=card.mp>0&&S.player.mp<card.mp;
-    const c=document.createElement('div');c.className='uno-card'+(low?' disabled':'');
+    const silenced=S.pStatus.silence&&!['atk','drawtwo'].includes(card.kind);
+    const dis=low||silenced;
+    const c=document.createElement('div');c.className='uno-card'+(dis?' disabled':'');
     c.style.setProperty('--card-col',card.col);
     c.innerHTML=`<div class="uc-corner">${card.icon}</div><div class="uc-icon">${card.icon}</div>`+
-      `<div class="uc-name">${card.name}</div>${card.mp?`<div class="uc-mp">${card.mp}MP</div>`:''}`;
-    if(!low)c.onclick=()=>selectCard(card);
+      `<div class="uc-name">${card.name}</div>${silenced?'<div class="uc-mp">SILENCED</div>':card.mp?`<div class="uc-mp">${card.mp}MP</div>`:''}`;
+    if(!dis)c.onclick=()=>selectCard(card);
     handWrap.appendChild(c);
   });
   if(S.items.potion>0){const b=document.createElement('button');b.className='act act-itm';b.style.minWidth='110px';
@@ -1443,6 +1481,11 @@ function resolveCard(card,mult,label){
       else if(res)log(`${card.icon} ${card.name}${tag} — resisted... hits for ${d}.`,'lm');
       else log(`${card.icon} ${card.name}${tag} hits for ${d}!`,'lm');
       applyED(d);
+      if(card.el==='ice'&&!S.over&&!S.eStatus.slow){
+        S.eStatus.slow={t:3};
+        addStatus('e-status','slow','❄️ Slowed');
+        log('❄ The chill sinks into its joints — it slows.','lm');
+      }
       chLim(weak?12:8);S.stats.dealt+=d;chkEnd();
       break;
     }
@@ -1500,11 +1543,13 @@ function doPotion(){
   if(!S.pTurn||S.over||S.items.potion<1)return;endTurn();
   S.items.potion--;const a=150;S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
   popD(a,'dh','cw-p');log('🧪 Potion restores '+a+' HP!','lh');updateBars();chkEnd();
+  saveProgress();
 }
 function doEther(){
   if(!S.pTurn||S.over||S.items.ether<1)return;endTurn();
   S.items.ether--;const a=40;S.player.mp=Math.min(S.player.maxMp,S.player.mp+a);
   log('🧿 Ether restores '+a+' MP!','lh');updateBars();chkEnd();
+  saveProgress();
 }
 function addStatus(row,type,label){
   const r=document.getElementById(row);if(!r)return;
@@ -1522,6 +1567,7 @@ function onWin(){
   log(`📊 Dealt ${S.stats.dealt} damage. ${S.stats.crits} critical hits!`,'lm');
   const clearedWave=S.wave;
   S.maxWaveCleared=Math.max(S.maxWaveCleared,clearedWave);
+  saveProgress();
   const wasFinal=clearedWave===7;
   S.wave++;
   if(wasFinal){
@@ -1622,6 +1668,7 @@ function showPrep(){
     </div>`;
   el.appendChild(cg);
 
+  saveProgress();
   showSc('sc-prep');
 }
 
@@ -1642,6 +1689,12 @@ function renderCodex(){
 function showCodex(){renderCodex();showSc('sc-codex');}
 
 // ── INIT ──
+loadProgress();
+if(S.maxWaveCleared>0){
+  const bw=document.getElementById('best-wave');
+  bw.textContent=`✦ Best run: Wave ${S.maxWaveCleared} cleared`;
+  bw.style.display='block';
+}
 document.getElementById('btn-start').onclick=startBattle;
 document.getElementById('btn-codex').onclick=showCodex;
 document.getElementById('btn-codex-back').onclick=()=>showSc('sc-prep');
