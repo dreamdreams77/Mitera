@@ -494,6 +494,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .sbadge.wall{background:rgba(192,90,255,0.18);border-color:var(--dark);color:var(--dark)}
 .sbadge.slow{background:rgba(126,207,255,0.18);border-color:var(--ice);color:var(--ice)}
 .sbadge.silence{background:rgba(255,79,31,0.12);border-color:var(--fire2);color:var(--fire2)}
+.sbadge.weaken{background:rgba(76,255,159,0.18);border-color:var(--wind);color:var(--wind)}
 
 /* ── DIALOGUE BOX LOG ── */
 #log-wrap{flex:1;min-height:0;overflow:hidden;border-top:2px solid var(--rim2);
@@ -859,6 +860,7 @@ const WAVE_STORY=[
   '📖 The Hollow Court\'s elite guard holds the last bridge before the capital.',
   '📖 Twin war-engines block the capital gate. Beyond them, only the tower remains.',
   '📖 At the tower\'s peak, a single silhouette waits with one wing unfurled.',
+  '📖 The tower is empty now. Empty, but not quiet — the shard in her wing won\'t stop humming.',
 ];
 
 const ENEMY_FLAVOR={
@@ -868,6 +870,7 @@ const ENEMY_FLAVOR={
   alien:'A rift-caller summoned through a tear the Court cut in the world itself.',
   boss:'A siege-engine built to grind fortress gates — and anything else — to rubble.',
   seph:'The general who broke the Accord. He remembers every clan he ended.',
+  echo:'Not him. Something that remembers being him, and hasn\'t learned yet that he\'s gone.',
 };
 
 // Battle dialogue — fires once per fight when the enemy's HP first drops
@@ -882,6 +885,7 @@ const ENEMY_TAUNTS={
     {at:75,spk:'e',txt:'⚠ TARGET ACQUIRED. ESCALATING.'},
     {at:35,spk:'e',txt:'*it vents molten coolant, cannons glowing brighter*'},
   ],
+  // Also fires for the postgame Echo (same spr) — it repeats his exact words on purpose.
   seph:[
     {at:80,spk:'e',txt:'"...still following me, little bird?"'},
     {at:65,spk:'p',txt:'"You taught me to fly. Not to run."'},
@@ -905,6 +909,8 @@ const CODEX=[
     text:'Before the Last Grove fell, it had a Warden — sworn to hold the line until the Council\'s word arrived. The word arrived late. The Warden never waited for one again. No record says where he went, only that he left with one wing fewer than he came with.'},
   {id:'ashveil',title:'Ashveil, Unveiled',unlock:7,
     text:'The Hollow Court\'s general was once the Last Grove\'s Warden — the one who taught Noom Wolliw to fly, before he taught himself to stop asking permission. He broke the Accord the night the Council\'s answer came too late to save anyone but her. He spent every year since insisting that was mercy.'},
+  {id:'echo',title:'The Echo at the Tower',unlock:8,
+    text:'Some say a shard remembers too much — that grief given a fight to hold onto will always look for a shape to wear again. Whether it is truly him or only what the tower kept, it repeats every word exactly as he said it.'},
 ];
 
 const MAT={
@@ -929,6 +935,7 @@ const ENEMIES={
   alien:{name:'Alien Entity',spr:'alien',hp:50,mp:25,atk:12,def:7,spd:1.3,weak:['dark'],res:['ice']},
   boss:{name:'Iron Warden',spr:'boss',hp:95,mp:30,atk:18,def:10,spd:1.1,weak:['ice','wind'],res:['fire']},
   seph:{name:'Ashveil',spr:'seph',hp:120,mp:50,atk:22,def:12,spd:1.4,weak:[],res:[]},
+  echo:{name:'Ashveil\'s Echo',spr:'seph',hp:150,mp:50,atk:24,def:13,spd:1.5,weak:['wind'],res:['ice']},
 };
 
 const ARENA_TINTS={
@@ -988,6 +995,7 @@ const WAVES=[
   ['boss','alien','mech'],
   ['boss','boss'],
   ['seph'],
+  ['echo'],
 ];
 
 // ── AMBIENT PARTICLES ──
@@ -1163,7 +1171,8 @@ function dealToPlayer(d){
 function enemyAtkHit(mult,cls,verb){
   atkSlide('cw-e','cw-p');
   const crit=Math.random()<0.12;
-  let d=calcD(S.enemy.atk,S.player.def,mult);if(crit)d=Math.floor(d*1.5);
+  const atk=S.eStatus.weaken?S.enemy.atk*0.7:S.enemy.atk;
+  let d=calcD(atk,S.player.def,mult);if(crit)d=Math.floor(d*1.5);
   playHit();
   setTimeout(()=>{
     hitFl('cw-p');d=dealToPlayer(d);
@@ -1175,6 +1184,10 @@ function enemyTurn(){
   if(S.eStatus.slow){
     S.eStatus.slow.t--;
     if(S.eStatus.slow.t<=0){delete S.eStatus.slow;removeStatus('e-status','slow');}
+  }
+  if(S.eStatus.weaken){
+    S.eStatus.weaken.t--;
+    if(S.eStatus.weaken.t<=0){delete S.eStatus.weaken;removeStatus('e-status','weaken');}
   }
   if(S.enemy.mp>=10&&Math.random()<0.3){
     S.enemy.mp-=10;playMagic('dark');
@@ -1233,6 +1246,10 @@ function startBattle(){
   if(S.wave===7){
     log('🗡️ "The willow forgets no one." — Ashveil','ls');
     log('🧚 She knows that voice. She wishes she didn\'t.','lo');
+  }
+  if(S.wave===8){
+    log('👻 The voice again — same words, same weight, wrong eyes.','ls');
+    log('🧚 "You\'re not him." Her hand doesn\'t shake this time.','lo');
   }
   clearInterval(S.atbT);S.atbT=setInterval(tick,75);
 }
@@ -1486,6 +1503,15 @@ function resolveCard(card,mult,label){
         addStatus('e-status','slow','❄️ Slowed');
         log('❄ The chill sinks into its joints — it slows.','lm');
       }
+      if(card.el==='thunder'&&!S.over&&S.eAtb>0){
+        S.eAtb=0;updateBars();
+        log('⚡ The jolt scrambles its rhythm — its charge resets!','lm');
+      }
+      if(card.el==='wind'&&!S.over&&!S.eStatus.weaken){
+        S.eStatus.weaken={t:3};
+        addStatus('e-status','weaken','💨 Weakened');
+        log('💨 The gale tears at its footing — its next blows will land soft.','lm');
+      }
       chLim(weak?12:8);S.stats.dealt+=d;chkEnd();
       break;
     }
@@ -1569,6 +1595,7 @@ function onWin(){
   S.maxWaveCleared=Math.max(S.maxWaveCleared,clearedWave);
   saveProgress();
   const wasFinal=clearedWave===7;
+  const wasEcho=clearedWave===8;
   S.wave++;
   if(wasFinal){
     setTimeout(()=>log('🏆 Ashveil falls, and the last wing folds still.','lk'),1200);
@@ -1576,6 +1603,11 @@ function onWin(){
     setTimeout(()=>log('📖 The untzee shard in Wolliw\'s wing flares once, then settles into an ordinary, quiet light.','lm'),4000);
     setTimeout(()=>log('📖 The Hollow Court\'s legions scatter without their general. The willow, at long last, stops waiting.','lm'),5400);
     setTimeout(()=>showSc('sc-prep'),7400);
+  }else if(wasEcho){
+    setTimeout(()=>log('🏆 The echo scatters like startled light, and doesn\'t come back.','lk'),1200);
+    setTimeout(()=>log('🧚 "Rest now," she tells it — tells him — tells whatever is left. "I did."','lo'),2600);
+    setTimeout(()=>log('📖 The shard goes quiet for good this time. The willow was right: it forgets no one, but it can still let go.','lm'),4200);
+    setTimeout(()=>showSc('sc-prep'),6200);
   }else{
     setTimeout(()=>showSc('sc-prep'),2000);
   }
@@ -1608,8 +1640,9 @@ function computeCombo(){
 // ── TITLE SCREEN ──
 function revealWaveSelect(){
   const grid=document.getElementById('wave-grid');grid.innerHTML='';
-  for(let i=1;i<=7;i++){const b=document.createElement('div');b.className='t-wb';
-    b.textContent=`WAVE ${i}`;b.onclick=()=>{S.wave=i;showPrep();};grid.appendChild(b);}
+  const maxWave=S.maxWaveCleared>=7?8:7;
+  for(let i=1;i<=maxWave;i++){const b=document.createElement('div');b.className='t-wb';
+    b.textContent=i===8?'WAVE 8 ✦':`WAVE ${i}`;b.onclick=()=>{S.wave=i;showPrep();};grid.appendChild(b);}
   document.getElementById('t-waves').classList.add('show');
 }
 function toggleLore(){
@@ -1648,9 +1681,10 @@ function showPrep(){
 
   const el=document.getElementById('enemy-list');el.innerHTML='';
   Object.keys(ENEMIES).forEach(id=>{
+    if(id==='echo'&&S.maxWaveCleared<7)return;
     const e=ENEMIES[id];
     const ew=document.createElement('div');ew.className='ei-wrap';
-    ew.innerHTML=`<div class="ei-emj">${{trooper:'🪖',mech:'⚙️',beast:'🦾',alien:'👽',boss:'💣',seph:'⚔️'}[id]}</div>
+    ew.innerHTML=`<div class="ei-emj">${{trooper:'🪖',mech:'⚙️',beast:'🦾',alien:'👽',boss:'💣',seph:'⚔️',echo:'👻'}[id]}</div>
       <div><div class="ei-name">${e.name}</div><div class="ei-st">HP: <b>${e.hp}</b> ATK: <b>${e.atk}</b> DEF: <b>${e.def}</b></div>
       ${ENEMY_FLAVOR[id]?`<div class="ei-tip" style="margin:4px 0 0">${ENEMY_FLAVOR[id]}</div>`:''}
       ${e.weak.length?`<div class="ei-tags">${e.weak.map(w=>`<div class="ei-tag">Weak: ${w}</div>`).join('')}</div>`:''}
