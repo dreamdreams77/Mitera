@@ -110,6 +110,8 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
    PREP SCREEN
 ════════════════════════════════════ */
 #sc-prep{overflow-y:auto;padding:10px 14px;gap:8px}
+#sc-codex{overflow-y:auto;padding:10px 14px;gap:8px}
+.codex-locked{opacity:0.5}
 .prep-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media(max-width:560px){.prep-cols{grid-template-columns:1fr}}
 .pnl{background:var(--panel);border:1px solid var(--rim);padding:11px;position:relative;overflow:hidden}
@@ -518,6 +520,8 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .lh{color:var(--restore);text-shadow:0 0 6px var(--restore)}
 .lc{color:var(--thunder);text-shadow:0 0 6px var(--thunder)}
 .lm{color:var(--txt2);font-size:0.85rem}
+.lta{color:var(--fire2);font-style:italic}
+.ltp{color:var(--willow);font-style:italic}
 
 /* ── ACTION BUTTONS — LARGE & ELEMENT-COLORED ── */
 #arow{
@@ -734,6 +738,15 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
       </div>
     </div>
     <button class="btn-start" id="btn-start">▶ BEGIN WAVE</button>
+    <button class="btn-start" id="btn-codex" style="margin-top:6px;background:linear-gradient(90deg,#0a1628,#0d1e36);border-color:var(--rim2);color:var(--txt2)">📖 CODEX</button>
+  </div>
+
+  <div id="sc-codex" class="screen">
+    <div class="pnl">
+      <div class="pnl-hd">Codex</div>
+      <div id="codex-list"></div>
+    </div>
+    <button class="btn-start" id="btn-codex-back">← BACK</button>
   </div>
 
   <div id="sc-battle" class="screen">
@@ -856,6 +869,43 @@ const ENEMY_FLAVOR={
   seph:'The general who broke the Accord. He remembers every clan he ended.',
 };
 
+// Battle dialogue — fires once per fight when the enemy's HP first drops
+// to or below `at` (percent). spk:'e' is the enemy speaking, 'p' is Wolliw.
+// Listed highest-at-to-lowest so a single big hit still reveals lines in order.
+const ENEMY_TAUNTS={
+  trooper:[{at:50,spk:'e',txt:'"Just hold the line till reinforcements—"'}],
+  mech:[{at:50,spk:'e',txt:'*internal alarms blare in a language no one programmed*'}],
+  beast:[{at:50,spk:'e',txt:'It bares teeth that were never meant to be this sharp.'}],
+  alien:[{at:50,spk:'e',txt:'The rift behind its eyes flickers, hungry for home.'}],
+  boss:[
+    {at:75,spk:'e',txt:'⚠ TARGET ACQUIRED. ESCALATING.'},
+    {at:35,spk:'e',txt:'*it vents molten coolant, cannons glowing brighter*'},
+  ],
+  seph:[
+    {at:80,spk:'e',txt:'"...still following me, little bird?"'},
+    {at:65,spk:'p',txt:'"You taught me to fly. Not to run."'},
+    {at:50,spk:'e',txt:'"I taught you to survive. The Council taught you to wait. Look what waiting cost the Grove."'},
+    {at:35,spk:'e',txt:'"I tore this wing off myself so I\'d never have to wait for permission again."'},
+    {at:20,spk:'p',txt:'"You could have come back for the rest of us."'},
+    {at:10,spk:'e',txt:'"...I know."'},
+  ],
+};
+
+const CODEX=[
+  {id:'accord',title:'The Willow Accord',unlock:0,
+    text:'Seven ages of peace, kept by a single vow: every fae-clan would guard its own untzee crystal, and none would draw on its power beyond its own borders. The Accord never promised safety. It promised restraint.'},
+  {id:'court',title:'The Hollow Court',unlock:0,
+    text:'They do not call themselves an army. They call themselves a correction — the old treaties torn down, the crystals seized, and "protection" redefined as whoever holds the most power to give it.'},
+  {id:'wolliw',title:'Noom Wolliw',unlock:0,
+    text:'Once a warden-in-training at the Last Grove, now the last of it. She carries her clan\'s shard sewn into her wing because there is nowhere left to set it down.'},
+  {id:'wingoath',title:'Wing-Oaths',unlock:2,
+    text:'Among the fae-clans, a wing is not just a wing. To break the Accord — to draw untzee power beyond the vow\'s bounds — is to sever the oath, and the oath does not let go quietly. No Accord-breaker has ever kept both wings.'},
+  {id:'warden',title:'The Warden Who Didn\'t Come',unlock:4,
+    text:'Before the Last Grove fell, it had a Warden — sworn to hold the line until the Council\'s word arrived. The word arrived late. The Warden never waited for one again. No record says where he went, only that he left with one wing fewer than he came with.'},
+  {id:'ashveil',title:'Ashveil, Unveiled',unlock:7,
+    text:'The Hollow Court\'s general was once the Last Grove\'s Warden — the one who taught Noom Wolliw to fly, before he taught himself to stop asking permission. He broke the Accord the night the Council\'s answer came too late to save anyone but her. He spent every year since insisting that was mercy.'},
+];
+
 const MAT={
   fire:{name:'Fire',icon:'🔥',type:'dmg',el:'fire',col:'#ff4f1f',mp:8,pow:28,desc:'Single target flame'},
   ice:{name:'Ice',icon:'❄',type:'dmg',el:'ice',col:'#7ecfff',mp:8,pow:28,desc:'Single target chill'},
@@ -906,7 +956,7 @@ let S={
   eq:[],combo:null,items:{potion:3,ether:2},stats:{dealt:0,crits:0,spells:0},
   atbT:null,lineIdx:0,pStatus:{},eStatus:{},
   hand:[],pendingCard:null,dice:[1,1,1,1,1],held:[false,false,false,false,false],rollsLeft:3,rolled:false,
-  streak:0,
+  streak:0,tauntFired:new Set(),maxWaveCleared:0,
 };
 
 const WAVES=[
@@ -1061,9 +1111,22 @@ function playLimitSound(){
 }
 
 // ── ENEMY LOGIC ──
-function applyED(d,cls){
+function checkTaunts(){
+  const list=ENEMY_TAUNTS[S.enemy.spr];if(!list)return;
+  const pct=(S.enemy.hp/S.enemy.maxHp)*100;
+  list.forEach(t=>{
+    if(!S.tauntFired.has(t.at)&&pct<=t.at){
+      S.tauntFired.add(t.at);
+      log(t.txt,t.spk==='p'?'ltp':'lta');
+    }
+  });
+}
+function applyED(d){
+  if(S.over)return;
   S.enemy.hp-=d;
-  if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
+  if(S.enemy.hp<=0)S.enemy.hp=0;
+  checkTaunts();
+  if(S.enemy.hp<=0&&!S.over){S.over=true;onWin();}
   updateBars();
 }
 function dealToPlayer(d){
@@ -1114,7 +1177,7 @@ function startBattle(){
   const scale=1+(S.wave-1)*0.05;
   const hp=Math.round(e.hp*scale),atk=Math.round(e.atk*scale);
   const w={...e,hp,atk,maxHp:hp};
-  S.enemy=w;S.over=false;S.pTurn=false;S.pAtb=0;S.eAtb=0;S.streak=0;
+  S.enemy=w;S.over=false;S.pTurn=false;S.pAtb=0;S.eAtb=0;S.streak=0;S.tauntFired=new Set();
   S.player.hp=100;S.player.mp=50;S.player.limit=0;
   S.pStatus={};S.eStatus={};
   buildEnemySprite(w.spr);
@@ -1135,7 +1198,10 @@ function startBattle(){
   if(WAVE_STORY[S.wave-1])log(WAVE_STORY[S.wave-1],'lm');
   if(S.combo)log(`✨ ${S.combo.icon} ${S.combo.name} armed!`,'lc');
   log('🧚 Noom Wolliw takes the field.','lo');
-  if(S.wave===7)log('🗡️ "The willow forgets no one." — Ashveil','ls');
+  if(S.wave===7){
+    log('🗡️ "The willow forgets no one." — Ashveil','ls');
+    log('🧚 She knows that voice. She wishes she didn\'t.','lo');
+  }
   clearInterval(S.atbT);S.atbT=setInterval(tick,75);
 }
 
@@ -1372,12 +1438,12 @@ function resolveCard(card,mult,label){
       let d=calcD(S.player.atk,S.enemy.def,(card.pow/30)*mult,card.el);
       if(card.el==='all')d=Math.floor(d*0.7);
       const weak=S.enemy.weak.includes(card.el),res=S.enemy.res.includes(card.el);
-      popD(d,weak?'dw':res?'dr':'dp','cw-e');S.enemy.hp-=d;
+      popD(d,weak?'dw':res?'dr':'dp','cw-e');
       if(weak){screenShake();log(`${card.icon} ${card.name}${tag} — WEAKNESS! hits for ${d}!`,'lk');}
       else if(res)log(`${card.icon} ${card.name}${tag} — resisted... hits for ${d}.`,'lm');
       else log(`${card.icon} ${card.name}${tag} hits for ${d}!`,'lm');
-      if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
-      chLim(weak?12:8);S.stats.dealt+=d;updateBars();chkEnd();
+      applyED(d);
+      chLim(weak?12:8);S.stats.dealt+=d;chkEnd();
       break;
     }
     case 'heal':{
@@ -1390,25 +1456,24 @@ function resolveCard(card,mult,label){
     }
     case 'drawtwo':{
       let total=0;
-      const strike=()=>{const d=calcD(S.player.atk,S.enemy.def,0.7*mult);total+=d;popD(d,'dk','cw-e');S.enemy.hp-=d;playHit();};
+      const strike=()=>{if(S.over)return;const d=calcD(S.player.atk,S.enemy.def,0.7*mult);total+=d;popD(d,'dk','cw-e');applyED(d);playHit();};
       atkSlide('cw-p','cw-e');
       setTimeout(strike,120);
       setTimeout(()=>{strike();
-        if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
         log(`✌️ Draw Two${tag} deals ${total}!`,'lk');
-        chLim(20);S.stats.dealt+=total;updateBars();chkEnd();},320);
+        chLim(20);S.stats.dealt+=total;chkEnd();},320);
       break;
     }
     case 'combo':{
       playMagic('fire');playLimitSound();
       let total=0;
-      const strike=()=>{const d=calcD(S.player.atk*1.2,S.enemy.def,(S.combo.mat.length/4)*mult);total+=d;popD(d,'dk','cw-e');S.enemy.hp-=d;playHit();};
+      const strike=()=>{if(S.over)return;const d=calcD(S.player.atk*1.2,S.enemy.def,(S.combo.mat.length/4)*mult);total+=d;popD(d,'dk','cw-e');applyED(d);playHit();};
       setTimeout(()=>{screenShake();strike();},100);
       setTimeout(()=>{atkSlide('cw-p','cw-e');strike();},250);
       setTimeout(()=>{strike();},400);
-      setTimeout(()=>{if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
+      setTimeout(()=>{
         log(`✨ ${S.combo.icon} ${S.combo.name}${tag} deals ${total}!`,'lk');
-        chLim(30);S.stats.dealt+=total;updateBars();chkEnd();},500);
+        chLim(30);S.stats.dealt+=total;chkEnd();},500);
       break;
     }
     case 'buff':{
@@ -1423,9 +1488,9 @@ function resolveCard(card,mult,label){
       screenShake();chromaFlash();playLimitSound();shockwave();
       setTimeout(()=>{
         let d=calcD(S.player.atk*2.5,S.enemy.def,1.5);
-        popD(d,'dk','cw-e');S.enemy.hp-=d;
+        popD(d,'dk','cw-e');
         log(`🌸 WILLOWBLOOM! ${d} damage!`,'lk');
-        if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}S.stats.dealt+=d;updateBars();chkEnd();
+        applyED(d);S.stats.dealt+=d;chkEnd();
       },300);
       break;
     }
@@ -1455,13 +1520,16 @@ function onWin(){
   clearInterval(S.atbT);
   log(`✨ ${S.enemy.name} defeated!`,'lc');
   log(`📊 Dealt ${S.stats.dealt} damage. ${S.stats.crits} critical hits!`,'lm');
-  const wasFinal=S.wave===7;
+  const clearedWave=S.wave;
+  S.maxWaveCleared=Math.max(S.maxWaveCleared,clearedWave);
+  const wasFinal=clearedWave===7;
   S.wave++;
   if(wasFinal){
     setTimeout(()=>log('🏆 Ashveil falls, and the last wing folds still.','lk'),1200);
-    setTimeout(()=>log('📖 The untzee shard in Wolliw\'s wing flares once, then settles into an ordinary, quiet light.','lm'),2600);
-    setTimeout(()=>log('📖 The Hollow Court\'s legions scatter without their general. The willow, at long last, stops waiting.','lm'),4200);
-    setTimeout(()=>showSc('sc-prep'),6200);
+    setTimeout(()=>log('🧚 "...I know," he said. It was the last true thing he ever told her.','lo'),2600);
+    setTimeout(()=>log('📖 The untzee shard in Wolliw\'s wing flares once, then settles into an ordinary, quiet light.','lm'),4000);
+    setTimeout(()=>log('📖 The Hollow Court\'s legions scatter without their general. The willow, at long last, stops waiting.','lm'),5400);
+    setTimeout(()=>showSc('sc-prep'),7400);
   }else{
     setTimeout(()=>showSc('sc-prep'),2000);
   }
@@ -1557,8 +1625,26 @@ function showPrep(){
   showSc('sc-prep');
 }
 
+// ── CODEX ──
+function renderCodex(){
+  const el=document.getElementById('codex-list');el.innerHTML='';
+  CODEX.forEach(c=>{
+    const unlocked=S.maxWaveCleared>=c.unlock;
+    const w=document.createElement('div');w.className='ei-wrap'+(unlocked?'':' codex-locked');
+    if(unlocked){
+      w.innerHTML=`<div class="ei-emj">📖</div><div><div class="ei-name">${c.title}</div><div class="ei-st" style="line-height:1.8">${c.text}</div></div>`;
+    }else{
+      w.innerHTML=`<div class="ei-emj">🔒</div><div><div class="ei-name">???</div><div class="ei-st">Clear Wave ${c.unlock} to unlock.</div></div>`;
+    }
+    el.appendChild(w);
+  });
+}
+function showCodex(){renderCodex();showSc('sc-codex');}
+
 // ── INIT ──
 document.getElementById('btn-start').onclick=startBattle;
+document.getElementById('btn-codex').onclick=showCodex;
+document.getElementById('btn-codex-back').onclick=()=>showSc('sc-prep');
 document.getElementById('t-press').onclick=revealWaveSelect;
 document.getElementById('ded').onclick=toggleLore;
 document.addEventListener('keydown',e=>{
