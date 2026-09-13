@@ -179,9 +179,11 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
   image-rendering:pixelated;
 }
 
-/* Simple background — just a dark scene */
+/* Simple background — just a dark scene, drifting slowly for depth */
 #arena-far{position:absolute;inset:0;opacity:0.4;background:repeating-linear-gradient(
-  90deg,#1a0f2e 0px,#1a0f2e 2px,#2d1b3d 2px,#2d1b3d 4px)}
+  90deg,#1a0f2e 0px,#1a0f2e 2px,#2d1b3d 2px,#2d1b3d 4px);
+  animation:bgDrift 40s linear infinite}
+@keyframes bgDrift{from{background-position:0 0}to{background-position:400px 0}}
 
 /* Minimal city silhouette */
 #arena-city{
@@ -215,12 +217,31 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 }
 #arena-floor::before{display:none}
 
-/* No glow spots */
-#glow-p{display:none}
-#glow-e{display:none}
+/* Starfield parallax layer — drifts slowly behind the city silhouette */
+#arena-stars{
+  position:absolute;inset:0;opacity:0.55;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.55) 50%, transparent 50%),
+    radial-gradient(1px 1px at 60% 15%, rgba(255,255,255,0.45) 50%, transparent 50%),
+    radial-gradient(1px 1px at 80% 45%, rgba(255,255,255,0.35) 50%, transparent 50%),
+    radial-gradient(1px 1px at 35% 60%, rgba(255,255,255,0.4) 50%, transparent 50%),
+    radial-gradient(1px 1px at 90% 70%, rgba(255,255,255,0.3) 50%, transparent 50%),
+    radial-gradient(1px 1px at 10% 85%, rgba(255,255,255,0.25) 50%, transparent 50%);
+  background-size:240px 180px;
+  animation:starDrift 70s linear infinite;
+}
+@keyframes starDrift{from{background-position:0 0}to{background-position:-240px 0}}
 
-/* Tint — subtle only */
-#arena-tint{position:absolute;inset:0;pointer-events:none;transition:background 0.8s ease;opacity:0.06}
+/* Ground glow — colored pool of light under each combatant, anchored inside .cw */
+.c-glow{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);
+  width:74px;height:18px;border-radius:50%;filter:blur(4px);pointer-events:none;
+  animation:glowPulse 2.4s ease-in-out infinite}
+@keyframes glowPulse{0%,100%{opacity:0.55;transform:translateX(-50%) scale(1)}50%{opacity:0.95;transform:translateX(-50%) scale(1.18)}}
+#glow-p{background:radial-gradient(ellipse at center,rgba(168,230,207,0.5) 0%,transparent 72%)}
+#glow-e{background:radial-gradient(ellipse at center,rgba(255,79,31,0.45) 0%,transparent 72%);animation-delay:.6s}
+
+/* Tint — now readable per-encounter */
+#arena-tint{position:absolute;inset:0;pointer-events:none;transition:background 0.8s ease;opacity:0.18}
 
 /* ── CHARACTER POSITIONING ── */
 .cw{position:absolute;bottom:50px;display:flex;flex-direction:column;align-items:center;gap:4px;
@@ -346,7 +367,6 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .se-boss .eb2-arm{position:absolute;bottom:16px;width:6px;height:18px;
   background:#2a0a00;border:1px solid #ff8c5a}
 .se-boss .eb2-armL{right:34px}.se-boss .eb2-armR{left:34px}
-.se-boss .eb2-aura{display:none}
 
 /* Sephiroth — pale one-winged angel */
 .se-seph{width:70px;height:90px}
@@ -365,7 +385,30 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 @keyframes wingDrift{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
 .se-seph .es-blade{position:absolute;bottom:4px;right:2px;width:2px;height:48px;
   background:#a0c0ff;border:1px solid #6080dd;transform:rotate(-10deg);transform-origin:bottom center}
-.se-seph .es-aura{display:none}
+
+/* ── SPRITE DEPTH — beveled shading + grounding shadow on every box-art part ── */
+.spr-p, .spr-e{filter:drop-shadow(0 5px 3px rgba(0,0,0,0.45))}
+.spr-p > div, .spr-e > div{
+  box-shadow:inset -2px -3px 3px rgba(0,0,0,0.35),
+             inset 2px 2px 2px rgba(255,255,255,0.22),
+             1px 2px 3px rgba(0,0,0,0.35);
+}
+
+/* ── BOSS AURAS — ambient energy pool around late-wave enemies ── */
+.se-boss .eb2-aura{position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:80px;height:80px;border-radius:50%;box-shadow:none;
+  background:radial-gradient(circle,rgba(255,79,31,0.35) 0%,transparent 70%);
+  filter:blur(6px);animation:auraPulse 1.8s ease-in-out infinite}
+.se-seph .es-aura{position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:92px;height:104px;border-radius:50%;box-shadow:none;
+  background:radial-gradient(circle,rgba(192,90,255,0.32) 0%,transparent 70%);
+  filter:blur(8px);animation:auraPulse 2.4s ease-in-out infinite}
+@keyframes auraPulse{0%,100%{opacity:0.6;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.15)}}
+
+/* ── CAMERA PUNCH — brief zoom-in on crits / limit breaks ── */
+#arena{transform-origin:center center}
+#arena.punch{animation:camPunch .35s ease-out}
+@keyframes camPunch{0%{transform:scale(1)}30%{transform:scale(1.035)}100%{transform:scale(1)}}
 
 /* ── CHARACTER ANIMATIONS ── */
 .cw.attack-r{animation:atkR .4s cubic-bezier(.4,0,.2,1)}
@@ -610,6 +653,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
     <!-- ARENA -->
     <div id="arena">
       <div id="arena-far">
+        <div id="arena-stars"></div>
         <div id="arena-city"></div>
       </div>
       <div id="arena-mako">
@@ -621,10 +665,9 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
         <div class="mako-col"></div>
       </div>
       <div id="arena-floor"></div>
-      <div id="glow-p"></div>
-      <div id="glow-e"></div>
       <div id="arena-tint"></div>
       <div id="cw-p" class="cw">
+        <div id="glow-p" class="c-glow"></div>
         <div class="spr-p">
           <div class="p-glow"></div>
           <div class="p-wL"></div>
@@ -640,6 +683,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
         <div class="c-turn-ind" id="p-turn-ind">◆ YOUR TURN</div>
       </div>
       <div id="cw-e" class="cw">
+        <div id="glow-e" class="c-glow"></div>
         <div class="spr-e" id="enemy-spr"></div>
         <div class="c-lbl en" id="arena-ename">Enemy</div>
         <div class="c-turn-ind" id="e-turn-ind">◆ ENEMY TURN</div>
@@ -806,6 +850,65 @@ function chromaFlash(){
   const ch=document.getElementById('chroma');ch.classList.add('go');
   setTimeout(()=>ch.classList.remove('go'),600);
 }
+function camPunch(){
+  const a=document.getElementById('arena');a.classList.remove('punch');void a.offsetWidth;
+  a.classList.add('punch');setTimeout(()=>a.classList.remove('punch'),350);
+}
+function impactBurst(sel,color,count=10){
+  const arena=document.getElementById('arena');const t=document.querySelector(sel);
+  if(!t||!arena)return;
+  const ar=arena.getBoundingClientRect(),tr=t.getBoundingClientRect();
+  const x=tr.left-ar.left+tr.width/2,y=tr.top-ar.top+tr.height/2;
+  for(let i=0;i<count;i++){
+    const p=document.createElement('div');
+    p.style.cssText=`position:absolute;left:${x}px;top:${y}px;width:4px;height:4px;border-radius:50%;
+      background:${color};box-shadow:0 0 6px ${color};pointer-events:none;z-index:150`;
+    arena.appendChild(p);
+    const ang=Math.random()*Math.PI*2,dist=18+Math.random()*38;
+    const dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist;
+    const anim=p.animate([
+      {transform:'translate(-50%,-50%) scale(1)',opacity:1},
+      {transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(0.3)`,opacity:0}
+    ],{duration:380+Math.random()*260,easing:'ease-out'});
+    anim.onfinish=()=>p.remove();
+  }
+}
+
+// ── AMBIENT PARTICLE FIELD (background canvas) ──
+(function(){
+  const cv=document.getElementById('particle-cv');
+  const ctx=cv.getContext('2d');
+  let W=0,H=0;
+  function resize(){W=cv.width=window.innerWidth;H=cv.height=window.innerHeight;}
+  window.addEventListener('resize',resize);resize();
+  const HUES=['168,230,207','126,207,255','247,216,75'];
+  function spawn(fromBottom){
+    return{
+      x:Math.random()*W,
+      y:fromBottom?H+Math.random()*40:Math.random()*H,
+      r:0.6+Math.random()*1.7,
+      spd:0.12+Math.random()*0.3,
+      drift:(Math.random()-0.5)*0.25,
+      a:0.12+Math.random()*0.3,
+      hue:HUES[Math.floor(Math.random()*HUES.length)],
+    };
+  }
+  const parts=Array.from({length:44},()=>spawn(false));
+  function tickP(){
+    ctx.clearRect(0,0,W,H);
+    parts.forEach(p=>{
+      p.y-=p.spd;p.x+=p.drift;
+      if(p.y<-10)Object.assign(p,spawn(true));
+      ctx.beginPath();
+      ctx.fillStyle=`rgba(${p.hue},${p.a})`;
+      ctx.shadowBlur=4;ctx.shadowColor=`rgba(${p.hue},${p.a})`;
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    });
+    requestAnimationFrame(tickP);
+  }
+  tickP();
+})();
 
 // ── WEB AUDIO API — SOUND DESIGN ──
 const AC=new(window.AudioContext||window.webkitAudioContext)();
@@ -821,7 +924,7 @@ function playCrit(){
   const o=AC.createOscillator(),g=AC.createGain();
   o.type='triangle';o.frequency.setValueAtTime(350,AC.currentTime);
   o.frequency.exponentialRampToValueAtTime(150,AC.currentTime+0.15);
-  g.gain.setValueAtTime(0.4,AC.currentTime);g.gain.exponentialRampToValueAtTime(0,AC.currentTime+0.2);
+  g.gain.setValueAtTime(0.4,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+0.2);
   o.connect(g);g.connect(AC.destination);
   o.start(AC.currentTime);o.stop(AC.currentTime+0.2);
 }
@@ -833,7 +936,7 @@ function playMagic(el){
   o.frequency.exponentialRampToValueAtTime(f*1.8,AC.currentTime+0.08);
   o.frequency.exponentialRampToValueAtTime(f*0.5,AC.currentTime+0.16);
   f2.type='lowpass';f2.frequency.setValueAtTime(1200,AC.currentTime);
-  g.gain.setValueAtTime(0.25,AC.currentTime);g.gain.exponentialRampToValueAtTime(0,AC.currentTime+0.18);
+  g.gain.setValueAtTime(0.25,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+0.18);
   o.connect(f2);f2.connect(g);g.connect(AC.destination);
   o.start(AC.currentTime);o.stop(AC.currentTime+0.18);
 }
@@ -842,7 +945,7 @@ function playLimitSound(){
   o.type='sawtooth';o.frequency.setValueAtTime(500,AC.currentTime);
   o.frequency.exponentialRampToValueAtTime(800,AC.currentTime+0.1);
   o.frequency.exponentialRampToValueAtTime(200,AC.currentTime+0.25);
-  g.gain.setValueAtTime(0.35,AC.currentTime);g.gain.exponentialRampToValueAtTime(0,AC.currentTime+0.3);
+  g.gain.setValueAtTime(0.35,AC.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+0.3);
   o.connect(g);g.connect(AC.destination);
   o.start(AC.currentTime);o.stop(AC.currentTime+0.3);
 }
@@ -863,7 +966,8 @@ function enemyTurn(){
     let d=calcD(S.enemy.atk,S.player.def,0.95);if(crit)d=Math.floor(d*1.5);
     playHit();
     setTimeout(()=>{
-      hitFl('cw-p');S.player.hp-=d;if(S.player.hp<=0){S.player.hp=0;S.over=true;onLose();}
+      hitFl('cw-p');impactBurst('#cw-p','#ff4f1f',crit?14:7);if(crit)camPunch();
+      S.player.hp-=d;if(S.player.hp<=0){S.player.hp=0;S.over=true;onLose();}
       log(S.enemy.name+' attacks for '+d+'!','ls');updateBars();chkEnd();
     },230);
   }
@@ -879,7 +983,7 @@ function startBattle(){
   const wave=WAVES[Math.min(S.wave-1,WAVES.length-1)];
   const eName=wave[Math.floor(Math.random()*wave.length)];
   const e=ENEMIES[eName];
-  const w={...e};
+  const w={...e,maxHp:e.hp};
   S.enemy=w;S.over=false;S.pTurn=false;S.pAtb=0;S.eAtb=0;
   S.player.hp=100;S.player.mp=50;S.player.limit=0;
   S.pStatus={};S.eStatus={};
@@ -888,6 +992,8 @@ function startBattle(){
   document.getElementById('b-ename').textContent='⚔ '+w.name;
   document.getElementById('arena-ename').textContent=w.name;
   document.getElementById('arena-tint').style.background=ARENA_TINTS[w.spr]||'rgba(255,79,31,0.12)';
+  const geCol=GLOW_P_COLS[w.spr]||'rgba(255,79,31,0.45)';
+  document.getElementById('glow-e').style.background=`radial-gradient(ellipse at center,${geCol} 0%,transparent 72%)`;
   buildSegBars();renderLoadout();updateWeakRow();updateBars();
   document.getElementById('blog').innerHTML='';
   
@@ -914,8 +1020,8 @@ function buildEnemySprite(spr){
     mech:['em-core','em-eye','em-scan','em-arm em-armL','em-arm em-armR','em-leg em-legL','em-leg em-legR','em-vent'],
     beast:['eb-body','eb-head','eb-eye','eb-eye eb-eye2','eb-tail','eb-leg eb-legA','eb-leg eb-legB','eb-leg eb-legC','eb-leg eb-legD'],
     alien:['ea-body','ea-head','ea-eye','ea-tent ea-tentL','ea-tent ea-tentR','ea-tent ea-tentL2','ea-tent ea-tentR2'],
-    boss:['eb2-body','eb2-head','eb2-eye','eb2-shoulder eb2-sL','eb2-shoulder eb2-sR','eb2-arm eb2-armL','eb2-arm eb2-armR'],
-    seph:['es-coat','es-body','es-wing','es-head','es-hair','es-blade'],
+    boss:['eb2-aura','eb2-body','eb2-head','eb2-eye','eb2-shoulder eb2-sL','eb2-shoulder eb2-sR','eb2-arm eb2-armL','eb2-arm eb2-armR'],
+    seph:['es-aura','es-coat','es-body','es-wing','es-head','es-hair','es-blade'],
   }[spr]||[];
   parts.forEach(p=>{const d=document.createElement('div');d.className=p;c.appendChild(d);});
 }
@@ -1037,7 +1143,8 @@ function doAttack(){
   const crit=Math.random()<0.15;
   let d=calcD(S.player.atk,S.enemy.def,1.0);if(crit){d=Math.floor(d*1.75);S.stats.crits++;playCrit();}
   else playHit();
-  setTimeout(()=>{hitFl('cw-e');applyED(d);
+  setTimeout(()=>{hitFl('cw-e');impactBurst('#cw-e',crit?'#ffd700':'#ff8c5a',crit?16:8);if(crit)camPunch();
+    applyED(d);
     log(crit?`⚡ CRITICAL! Noom Wolliw strikes for ${d}!`:`Noom Wolliw attacks for ${d}.`,crit?'lk':'lp');
     chLim(12);S.stats.dealt+=d;chkEnd();},230);
 }
@@ -1045,13 +1152,13 @@ function doCast(id){
   if(!S.pTurn||S.over)return;const m=MAT[id];if(S.player.mp<m.mp)return;
   endTurn();S.player.mp-=m.mp;S.stats.spells++;playMagic(m.el);
   if(m.type==='heal'){const a=m.pow+30;S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
-    popD(a,'dh','cw-p');log(`${m.icon} Cure restores ${a} HP!`,'lh');updateBars();checkEnd2();}
+    popD(a,'dh','cw-p');impactBurst('#cw-p',m.col,10);log(`${m.icon} Cure restores ${a} HP!`,'lh');updateBars();checkEnd2();}
   else if(m.type==='buff'){S.player.wallT=4;S.player.wall=true;
-    addStatus('p-status','wall','🛡️ Wall');log(`${m.icon} Wall rises!`,'lh');}
+    impactBurst('#cw-p',m.col,10);addStatus('p-status','wall','🛡️ Wall');log(`${m.icon} Wall rises!`,'lh');}
   else{
     let d=calcD(S.player.atk,S.enemy.def,m.pow/30,m.el);
     if(m.el==='all')d=Math.floor(d*0.7);
-    playMagic(m.el);popD(d,'dp','cw-e');S.enemy.hp-=d;
+    playMagic(m.el);popD(d,'dp','cw-e');impactBurst('#cw-e',m.col,10);S.enemy.hp-=d;
     log(`${m.icon} ${m.name} hits for ${d}!`,'lm');
     if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}chLim(8);S.stats.dealt+=d;
   }
@@ -1063,9 +1170,9 @@ function doCombo(c){
   let totalDmg=0;
   const strike=()=>{
     const d=calcD(S.player.atk*1.2,S.enemy.def,c.mat.length/4);totalDmg+=d;
-    popD(d,'dk','cw-e');S.enemy.hp-=d;playHit();
+    popD(d,'dk','cw-e');impactBurst('#cw-e','#ff8c5a',12);S.enemy.hp-=d;playHit();
   };
-  setTimeout(()=>{screenShake();strike();},100);
+  setTimeout(()=>{screenShake();camPunch();strike();},100);
   setTimeout(()=>{atkSlide('cw-p','cw-e');strike();},250);
   setTimeout(()=>{strike();},400);
   setTimeout(()=>{if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}
@@ -1074,10 +1181,10 @@ function doCombo(c){
 function doLimit(){
   if(!S.pTurn||S.over||S.player.limit<100)return;
   endTurn();S.player.limit=0;
-  screenShake();chromaFlash();playLimitSound();shockwave();
+  screenShake();camPunch();chromaFlash();playLimitSound();shockwave();
   setTimeout(()=>{
     let d=calcD(S.player.atk*2.5,S.enemy.def,1.5);
-    popD(d,'dk','cw-e');S.enemy.hp-=d;
+    popD(d,'dk','cw-e');impactBurst('#cw-e','#ff6d00',26);S.enemy.hp-=d;
     log(`💥 BUSTER LIMIT! ${d} damage!`,'lk');
     if(S.enemy.hp<=0){S.enemy.hp=0;S.over=true;onWin();}S.stats.dealt+=d;updateBars();chkEnd();
   },300);
@@ -1085,7 +1192,7 @@ function doLimit(){
 function doPotion(){
   if(!S.pTurn||S.over||S.items.potion<1)return;endTurn();
   S.items.potion--;const a=150;S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
-  popD(a,'dh','cw-p');log('🧪 Potion restores '+a+' HP!','lh');updateBars();checkEnd2();
+  popD(a,'dh','cw-p');impactBurst('#cw-p','#4cff9f',10);log('🧪 Potion restores '+a+' HP!','lh');updateBars();checkEnd2();
 }
 function doEther(){
   if(!S.pTurn||S.over||S.items.ether<1)return;endTurn();
