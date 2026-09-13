@@ -306,6 +306,29 @@ function chromaFlash(){
   const ch=document.getElementById('chroma');ch.classList.add('go');
   setTimeout(()=>ch.classList.remove('go'),600);
 }
+function camPunch(){
+  const a=document.getElementById('arena');a.classList.remove('punch');void a.offsetWidth;
+  a.classList.add('punch');setTimeout(()=>a.classList.remove('punch'),350);
+}
+function impactBurst(sel,color,count=10){
+  const arena=document.getElementById('arena');const t=document.querySelector(sel);
+  if(!t||!arena)return;
+  const ar=arena.getBoundingClientRect(),tr=t.getBoundingClientRect();
+  const x=tr.left-ar.left+tr.width/2,y=tr.top-ar.top+tr.height/2;
+  for(let i=0;i<count;i++){
+    const p=document.createElement('div');
+    p.style.cssText=`position:absolute;left:${x}px;top:${y}px;width:4px;height:4px;border-radius:50%;
+      background:${color};box-shadow:0 0 6px ${color};pointer-events:none;z-index:150`;
+    arena.appendChild(p);
+    const ang=Math.random()*Math.PI*2,dist=18+Math.random()*38;
+    const dx=Math.cos(ang)*dist,dy=Math.sin(ang)*dist;
+    const anim=p.animate([
+      {transform:'translate(-50%,-50%) scale(1)',opacity:1},
+      {transform:`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px)) scale(0.3)`,opacity:0}
+    ],{duration:380+Math.random()*260,easing:'ease-out'});
+    anim.onfinish=()=>p.remove();
+  }
+}
 
 // ── WEB AUDIO API — SOUND DESIGN ──
 const AC=new(window.AudioContext||window.webkitAudioContext)();
@@ -390,7 +413,8 @@ function enemyAtkHit(mult,cls,verb){
   let d=calcD(atk,S.player.def,mult);if(crit)d=Math.floor(d*1.5);
   playHit();
   setTimeout(()=>{
-    hitFl('cw-p');d=dealToPlayer(d);
+    hitFl('cw-p');impactBurst('#cw-p','#ff4f1f',crit?14:7);if(crit)camPunch();
+    d=dealToPlayer(d);
     log(`${S.enemy.name} ${verb} for ${d}!`,cls);updateBars();chkEnd();
   },230);
 }
@@ -699,12 +723,13 @@ function resolveCard(card,mult,label){
     case 'atk':{
       atkSlide('cw-p','cw-e');
       const d=calcD(S.player.atk,S.enemy.def,mult,card.el);
-      if(mult>=1.8){S.stats.crits++;playCrit();}else playHit();
-      setTimeout(()=>{hitFl('cw-e');
+      const crit=mult>=1.8;
+      if(crit){S.stats.crits++;playCrit();}else playHit();
+      setTimeout(()=>{hitFl('cw-e');impactBurst('#cw-e',crit?'#ffd700':'#ff8c5a',crit?16:8);if(crit)camPunch();
         S.stats.dealt+=d;if(d>S.stats.bestHit)S.stats.bestHit=d;
         applyED(d);
-        log(`${card.icon} ${card.name}${tag} hits for ${d}!`,mult>=1.8?'lk':'lp');
-        chLim(mult>=1.8?18:12);chkEnd();},230);
+        log(`${card.icon} ${card.name}${tag} hits for ${d}!`,crit?'lk':'lp');
+        chLim(crit?18:12);chkEnd();},230);
       break;
     }
     case 'dmg':{
@@ -713,8 +738,9 @@ function resolveCard(card,mult,label){
       if(card.el==='all')d=Math.floor(d*0.7);
       const weak=S.enemy.weak.includes(card.el),res=S.enemy.res.includes(card.el);
       popD(d,weak?'dw':res?'dr':'dp','cw-e');
+      impactBurst('#cw-e',card.col,weak?14:8);
       if(weak){
-        screenShake();log(`${card.icon} ${card.name}${tag} — WEAKNESS! hits for ${d}!`,'lk');
+        screenShake();camPunch();log(`${card.icon} ${card.name}${tag} — WEAKNESS! hits for ${d}!`,'lk');
         if(!S.lifetime.weakElements.includes(card.el)){S.lifetime.weakElements.push(card.el);checkAchievements();}
       }
       else if(res)log(`${card.icon} ${card.name}${tag} — resisted... hits for ${d}.`,'lm');
@@ -742,7 +768,7 @@ function resolveCard(card,mult,label){
       playMagic('restore');
       const a=Math.floor((card.pow+30)*mult);
       S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
-      popD(a,'dh','cw-p');log(`${card.icon} ${card.name}${tag} restores ${a} HP!`,'lh');
+      popD(a,'dh','cw-p');impactBurst('#cw-p',card.col,10);log(`${card.icon} ${card.name}${tag} restores ${a} HP!`,'lh');
       updateBars();chkEnd();
       break;
     }
@@ -750,7 +776,7 @@ function resolveCard(card,mult,label){
       let total=0;
       const strike=()=>{if(S.over)return;const d=calcD(S.player.atk,S.enemy.def,0.7*mult);total+=d;
         S.stats.dealt+=d;if(d>S.stats.bestHit)S.stats.bestHit=d;
-        popD(d,'dk','cw-e');applyED(d);playHit();};
+        popD(d,'dk','cw-e');impactBurst('#cw-e','#ff5e5e',10);applyED(d);playHit();};
       atkSlide('cw-p','cw-e');
       setTimeout(strike,120);
       setTimeout(()=>{strike();
@@ -763,8 +789,8 @@ function resolveCard(card,mult,label){
       let total=0;
       const strike=()=>{if(S.over)return;const d=calcD(S.player.atk*1.2,S.enemy.def,(S.combo.mat.length/4)*mult);total+=d;
         S.stats.dealt+=d;if(d>S.stats.bestHit)S.stats.bestHit=d;
-        popD(d,'dk','cw-e');applyED(d);playHit();};
-      setTimeout(()=>{screenShake();strike();},100);
+        popD(d,'dk','cw-e');impactBurst('#cw-e','#ff8c5a',12);applyED(d);playHit();};
+      setTimeout(()=>{screenShake();camPunch();strike();},100);
       setTimeout(()=>{atkSlide('cw-p','cw-e');strike();},250);
       setTimeout(()=>{strike();},400);
       setTimeout(()=>{
@@ -775,16 +801,16 @@ function resolveCard(card,mult,label){
     case 'buff':{
       S.player.wallT=4;
       if(!S.player.wall){S.player.wall=true;addStatus('p-status','wall','🛡️ Wall');}
-      log(`${card.icon} Wall rises!`,'lh');
+      impactBurst('#cw-p',card.col,10);log(`${card.icon} Wall rises!`,'lh');
       updateBars();
       break;
     }
     case 'limit':{
       S.player.limit=0;
-      screenShake();chromaFlash();playLimitSound();shockwave();
+      screenShake();camPunch();chromaFlash();playLimitSound();shockwave();
       setTimeout(()=>{
         let d=calcD(S.player.atk*2.5,S.enemy.def,1.5);
-        popD(d,'dk','cw-e');
+        popD(d,'dk','cw-e');impactBurst('#cw-e','#ff6d00',26);
         log(`🌸 WILLOWBLOOM! ${d} damage!`,'lk');
         S.stats.dealt+=d;if(d>S.stats.bestHit)S.stats.bestHit=d;
         applyED(d);chkEnd();
@@ -796,7 +822,7 @@ function resolveCard(card,mult,label){
 function doPotion(){
   if(!S.pTurn||S.over||S.items.potion<1)return;endTurn();
   S.items.potion--;const a=150;S.player.hp=Math.min(S.player.maxHp,S.player.hp+a);
-  popD(a,'dh','cw-p');log('🧪 Potion restores '+a+' HP!','lh');updateBars();chkEnd();
+  popD(a,'dh','cw-p');impactBurst('#cw-p','#4cff9f',10);log('🧪 Potion restores '+a+' HP!','lh');updateBars();chkEnd();
   saveProgress();
 }
 function doEther(){

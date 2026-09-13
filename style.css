@@ -8,8 +8,12 @@
   --txt:#c8daea; --txt2:#4a6a8a; --white:#fff;
   --hp-hi:#00e676; --hp-mid:#ffeb3b; --hp-lo:#f44336; --mp:#29b6f6;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation}
+/* Interactive elements: no accidental text selection/callout on long-press */
+.act,.btn-start,.btn-sub,.slot,.mat-orb,.t-wb,.t-press,.t-ded,.uno-card,.diff-btn,.hud-icon-btn{
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
 body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monospace;position:relative}
 
 /* ── GLOBAL BG ── */
@@ -192,7 +196,11 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
   background:linear-gradient(180deg,#1a0f2e 0%,#2d1b3d 40%,#1f1428 80%,#0a0510 100%);
   border-bottom:4px solid #2a2a2a;
   image-rendering:pixelated;
+  transform-origin:center center;
 }
+/* Camera punch — brief zoom-in on crits, fusion cards, and Willowbloom */
+#arena.punch{animation:camPunch .35s ease-out}
+@keyframes camPunch{0%{transform:scale(1)}30%{transform:scale(1.035)}100%{transform:scale(1)}}
 
 /* Simple background — just a dark scene */
 #arena-far{position:absolute;inset:0;opacity:0.4;background:repeating-linear-gradient(
@@ -266,8 +274,8 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .cw.attack-r .spr-p::after,.cw.attack-l .spr-p::after,
 .cw.attack-r .spr-e::after,.cw.attack-l .spr-e::after{width:46%;opacity:0.6}
 
-/* Tint — subtle only */
-#arena-tint{position:absolute;inset:0;pointer-events:none;transition:background 0.8s ease;opacity:0.06}
+/* Tint — readable per-encounter */
+#arena-tint{position:absolute;inset:0;pointer-events:none;transition:background 0.8s ease;opacity:0.16}
 
 /* ── CHARACTER POSITIONING ── */
 .cw{position:absolute;bottom:50px;display:flex;flex-direction:column;align-items:center;gap:4px;
@@ -429,6 +437,15 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
   background:radial-gradient(circle,rgba(160,140,255,0.32) 0%,transparent 70%);
   filter:blur(5px);animation:auraPulse 2.6s ease-in-out infinite;
 }
+
+/* ── SPRITE DEPTH — beveled shading on every box-art part, for less-flat pixel art ── */
+.spr-p > div, .spr-e > div{
+  box-shadow:inset -2px -3px 3px rgba(0,0,0,0.35),
+             inset 2px 2px 2px rgba(255,255,255,0.22),
+             1px 2px 3px rgba(0,0,0,0.35);
+}
+/* ...except the soft glow/aura circles, which should stay a clean blurred radial */
+.spr-p .p-glow,.se-boss .eb2-aura,.se-seph .es-aura{box-shadow:none}
 
 /* ── CHARACTER ANIMATIONS ── */
 .cw.attack-r{animation:atkR .4s cubic-bezier(.4,0,.2,1)}
