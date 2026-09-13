@@ -27,8 +27,12 @@
   --txt:#c8daea; --txt2:#4a6a8a; --white:#fff;
   --hp-hi:#00e676; --hp-mid:#ffeb3b; --hp-lo:#f44336; --mp:#29b6f6;
 }
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
+/* Interactive elements: no touch-zoom delay, no accidental text selection/callout on long-press */
+.act,.btn-start,.slot,.mat-orb,.t-wb,.t-press,.t-ded{
+  touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+}
 body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monospace;position:relative}
 
 /* ── GLOBAL BG ── */
@@ -169,7 +173,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 /* ════════════════════════════════════
    BATTLE SCREEN — UPGRADED
 ════════════════════════════════════ */
-#sc-battle{flex-direction:column;gap:0}
+#sc-battle{flex-direction:column;gap:0;overflow-y:auto}
 
 /* ── ARENA — RETRO PIXEL STYLE ── */
 #arena{
@@ -178,6 +182,10 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
   border-bottom:4px solid #2a2a2a;
   image-rendering:pixelated;
 }
+/* Shrink the arena on short viewports (phones, small windows) so the action
+   buttons and log never get pushed off-screen with no way to reach them */
+@media(max-height:800px){#arena{height:240px}}
+@media(max-height:640px){#arena{height:170px}}
 
 /* Simple background — just a dark scene, drifting slowly for depth */
 #arena-far{position:absolute;inset:0;opacity:0.4;background:repeating-linear-gradient(
@@ -249,9 +257,17 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 #cw-p{left:12%}
 #cw-e{right:12%}
 .c-lbl{font-family:'VT323',monospace;font-size:1rem;letter-spacing:0.08em;
-  text-shadow:0 0 12px currentColor;text-align:center;min-height:18px}
+  text-shadow:0 0 12px currentColor;text-align:center;min-height:18px;
+  max-width:38vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .c-lbl.pl{color:var(--willow);text-shadow:0 0 8px var(--willow),0 0 16px rgba(168,230,207,0.4)}
 .c-lbl.en{color:var(--fire2);text-shadow:0 0 8px var(--fire2),0 0 16px rgba(255,79,31,0.4)}
+/* Narrow screens (phones): pull combatants toward the edges and shrink
+   labels so the two names can't collide in the middle of the arena */
+@media(max-width:560px){
+  #cw-p{left:2%}
+  #cw-e{right:2%}
+  .c-lbl{font-size:0.8rem;max-width:46vw}
+}
 .c-turn-ind{font-size:0.65rem;color:var(--thunder);opacity:0;font-weight:bold}
 .c-turn-ind.active{opacity:1;animation:turnFlash .5s ease-in-out infinite}
 @keyframes turnFlash{0%,100%{opacity:0.4;text-shadow:0 0 2px var(--thunder)}50%{opacity:1;text-shadow:0 0 8px var(--thunder)}}
@@ -490,7 +506,7 @@ body{background:var(--ink);color:var(--txt);font-family:'Share Tech Mono',monosp
 .sbadge.silence{background:rgba(255,79,31,0.12);border-color:var(--fire2);color:var(--fire2)}
 
 /* ── DIALOGUE BOX LOG ── */
-#log-wrap{flex:1;min-height:0;overflow:hidden;border-top:2px solid var(--rim2);
+#log-wrap{flex:1;min-height:90px;overflow:hidden;border-top:2px solid var(--rim2);
   background:linear-gradient(180deg,rgba(10,22,40,0.5),rgba(13,30,54,0.5));
   padding:12px 14px;position:relative}
 #log-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
